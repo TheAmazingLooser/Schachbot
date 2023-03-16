@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Schachbot", "Schachbot\Schachbot.csproj", "{1E1DAA2F-F0B6-48AD-BF30-145D1D77D243}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FNA.Core", "..\FNA\FNA.Core.csproj", "{6FDB51B3-CDEA-4745-B8EE-7B6F5BAA185E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6FDB51B3-CDEA-4745-B8EE-7B6F5BAA185E}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{6FDB51B3-CDEA-4745-B8EE-7B6F5BAA185E}.Debug|Any CPU.Build.0 = Debug|x64
+		{6FDB51B3-CDEA-4745-B8EE-7B6F5BAA185E}.Release|Any CPU.ActiveCfg = Release|x64
+		{6FDB51B3-CDEA-4745-B8EE-7B6F5BAA185E}.Release|Any CPU.Build.0 = Release|x64
+		{1E1DAA2F-F0B6-48AD-BF30-145D1D77D243}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{1E1DAA2F-F0B6-48AD-BF30-145D1D77D243}.Debug|Any CPU.Build.0 = Debug|x64
+		{1E1DAA2F-F0B6-48AD-BF30-145D1D77D243}.Release|Any CPU.ActiveCfg = Release|x64
+		{1E1DAA2F-F0B6-48AD-BF30-145D1D77D243}.Release|Any CPU.Build.0 = Release|x64
+	EndGlobalSection
+EndGlobal
