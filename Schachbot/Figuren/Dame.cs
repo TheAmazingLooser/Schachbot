@@ -8,6 +8,8 @@ public class Dame : ISchachfigur
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
     public bool IstSchwarz { get; set; }
+    
+    public event BewegtHandler Bewegt;
 
     public Dame(bool istSchwarz = false)
     {
@@ -40,7 +42,10 @@ public class Dame : ISchachfigur
             if (schachbrett.GetFeld(x + f1, y + f2) is SchachbrettFeld feld && (feld.Figur is ISchachfigur sf && sf.IstSchwarz != IstSchwarz || feld.Figur == null))
             {
                 toReturn.Add(new Vector2(x + f1, y + f2));
-                return true;
+                if (feld.Figur == null)
+                    return true;
+
+                return false;
             }
 
             return false;
@@ -60,18 +65,22 @@ public class Dame : ISchachfigur
 
             return false;
         }
+        
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(-f, f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(f, -f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(f, f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(-f, -f); f++) ;
 
-        for (int f = 0; f < 7; f++)
-        {
-            if (!AddIfNotSameTeamDiagonal(f, f))
-                break;
-        }
-        for (int f = 0; f < 7 && AddIfNotSameTeamDiagonal(-f, f); f++) ;
-        for (int f = 0; f < 7 && AddIfNotSameTeamDiagonal(f, -f); f++) ;
-
-        for (int f = 0; f < 7 && AddIfNotSameTeamGerade(f, true); f++) ;
-        for (int f = 0; f < 7 && AddIfNotSameTeamGerade(f, false); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(-f, false); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(f, false); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(-f, true); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(f, true); f++) ;
 
         return toReturn;
+    }
+
+    public void Bewege(int x, int y)
+    {
+        Bewegt?.Invoke(x, y);
     }
 }

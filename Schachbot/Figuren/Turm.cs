@@ -9,6 +9,8 @@ public class Turm : ISchachfigur
     private static Texture2D _outline { get; set; }
     public bool IstSchwarz { get; set; }
 
+    public event BewegtHandler Bewegt;
+
     public Turm(bool istSchwarz = false)
     {
         IstSchwarz = istSchwarz;
@@ -49,9 +51,17 @@ public class Turm : ISchachfigur
             return false;
         }
 
-        for (int f = 0; f < 7 && AddIfNotSameTeamGerade(f, true); f++) ;
-        for (int f = 0; f < 7 && AddIfNotSameTeamGerade(f, false); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(f, true); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(-f, true); f++) ;
+
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(f, false); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamGerade(-f, false); f++) ;
 
         return toReturn;
+    }
+
+    public void Bewege(int x, int y)
+    {
+        Bewegt?.Invoke(x, y);
     }
 }

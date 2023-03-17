@@ -9,8 +9,14 @@ public class Schachbrett
 {
     public SchachbrettFeld[][] Brett;
 
-    private MouseState lastMouseState;
-    
+    private List<Vector2> _hinweisPositionen = new List<Vector2>();
+    private Vector2 _hinweisPosition = new Vector2();
+    private bool _weissAmZug = false;
+
+    private Vector2 _weisserKönig = new Vector2();
+    private Vector2 _schwarzerKönig = new Vector2();
+
+
     public Schachbrett()
     {
         Brett = new SchachbrettFeld[8][];
@@ -23,6 +29,9 @@ public class Schachbrett
             }
         }
         
+        Random r = new Random();
+        _weissAmZug = r.Next(0, 100) > 50;
+
     }
 
     public SchachbrettFeld GetFeld(int x, int y)
@@ -36,36 +45,137 @@ public class Schachbrett
     public void InitialisiereBrett()
     {
 
-        for (int i = 0; i < 8; i++)
+        for (int x = 0; x < 8; x++)
         {
-            Brett[i][1].SetzeFigur(new Bauer());
-            Brett[i][6].SetzeFigur(new Bauer(true));
+            Brett[x][1].SetzeFigur(new Bauer(), x, 1);
+            Brett[x][6].SetzeFigur(new Bauer(true), x, 6);
         }
 
         foreach(var y in new[] {0,7})
         {
-            Brett[0][y].SetzeFigur(new Turm(y == 7));
-            Brett[1][y].SetzeFigur(new Springer(y == 7));
-            Brett[2][y].SetzeFigur(new Läufer(y == 7));
-            Brett[3][y].SetzeFigur(new König(y == 7));
-            Brett[4][y].SetzeFigur(new Dame(y == 7));
-            Brett[5][y].SetzeFigur(new Läufer(y == 7));
-            Brett[6][y].SetzeFigur(new Springer(y == 7));
-            Brett[7][y].SetzeFigur(new Turm(y == 7));
+            Brett[0][y].SetzeFigur(new Turm(y == 7), 0, y);
+            Brett[1][y].SetzeFigur(new Springer(y == 7), 1, y);
+            Brett[2][y].SetzeFigur(new Läufer(y == 7), 2, y);
+            Brett[4][y].SetzeFigur(new Dame(y == 7), 4, y);
+            Brett[5][y].SetzeFigur(new Läufer(y == 7), 5, y);
+            Brett[6][y].SetzeFigur(new Springer(y == 7), 6, y);
+            Brett[7][y].SetzeFigur(new Turm(y == 7), 7, y);
         }
+
+        König weiss = new König();
+        König schwarz = new König(true);
+
+        weiss.Bewegt += (x, y) => _weisserKönig = new Vector2(x, y);
+        schwarz.Bewegt += (x, y) => _schwarzerKönig = new Vector2(x, y);
+
+        Brett[3][0].SetzeFigur(weiss, 3, 0);
+        Brett[3][7].SetzeFigur(schwarz, 3, 7);
+
+        
+    }
+
+    public void Randomize()
+    {
+        Random r = new Random();
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                if (Brett[x][y].Figur is ISchachfigur figur)
+                {
+                    // Zufallsposition bekommen:
+                    int xRand = r.Next(0, 8);
+                    int yRand = r.Next(0, 8);
+
+                    Brett[x][y].SetzeFigur(Brett[xRand][yRand].Figur,x,y);
+                    Brett[xRand][yRand].SetzeFigur(figur, xRand, yRand);
+                }
+            }
+        }
+    }
+    
+    private bool ImSchach(bool weiss)
+    {
+        Vector2 königPosition = weiss ? _weisserKönig : _schwarzerKönig;
+        for (int x = 0; x < 8; x++)
+        {
+            for (int y = 0; y < 8; y++)
+            {
+                if (Brett[x][y].Figur is ISchachfigur figur && figur.IstWeiss != weiss)
+                {
+                    List<Vector2> moves = figur.GetLegalMoves(this, x, y);
+                    if (moves.Contains(königPosition))
+                        return true;
+                }
+            }
+        }
+
+        return false;
     }
     
     public void Update(GameTime gameTime)
     {
-        var mouseState = Mouse.GetState();
-
-        // Auf klicks überprüfen
-        if (lastMouseState.LeftButton == ButtonState.Released && mouseState.LeftButton == ButtonState.Pressed)
+        if (_weissAmZug)
         {
-            Console.WriteLine("Click");
+            Dictionary<Vector2, List<Vector2>> botZüge = new Dictionary<Vector2, List<Vector2>>();
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 8; y++)
+                {
+                    if (Brett[x][y].Figur is ISchachfigur figur && figur.IstWeiss)
+                    {
+                        List<Vector2> moves = figur.GetLegalMoves(this, x, y);
+                        if (moves.Count > 0)
+                            botZüge.Add(new Vector2(x, y), moves);
+                    }
+                }
+            }
+
+            if (botZüge.Count > 0)
+            {
+                // Zufälligen Zug auswählen
+                Random r = new Random();
+                int figurPosition = r.Next(0, botZüge.Count);
+                int xStart = (int)botZüge.ElementAt(figurPosition).Key.X;
+                int yStart = (int)botZüge.ElementAt(figurPosition).Key.Y;
+
+                int zug = r.Next(0, botZüge.ElementAt(figurPosition).Value.Count);
+                int xZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).X;
+                int yZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).Y;
+
+                Brett[xZiel][yZiel].SetzeFigur(Brett[xStart][yStart].Figur, xZiel, yZiel);
+                Brett[xStart][yStart].SetzeFigur(null, xStart, yStart);
+            }
+            _weissAmZug = false;
+        }
+    }
+
+    public void Klick(int width, int height)
+    {
+        MouseState ms = Mouse.GetState();
+        int Feldbreite = width / 8;
+        int Feldhöhe = height / 8;
+        int x = ms.X / Feldbreite;
+        int y = ms.Y / Feldhöhe;
+
+        if (_hinweisPositionen.Contains(new Vector2(x,y)) && !_weissAmZug)
+        {
+            Brett[x][y].SetzeFigur(Brett[(int)_hinweisPosition.X][(int)_hinweisPosition.Y].Figur, x,y);
+            Brett[(int)_hinweisPosition.X][(int)_hinweisPosition.Y].SetzeFigur(null, (int)_hinweisPosition.X, (int)_hinweisPosition.Y);
+
+            _weissAmZug = true;
+            _hinweisPositionen.Clear();
+            return;
         }
 
-        lastMouseState = mouseState;
+        if (Brett[x][y].Figur is ISchachfigur figur && !figur.IstWeiss)
+        {
+            _hinweisPositionen = figur.GetLegalMoves(this, x, y);
+            _hinweisPosition = new Vector2(x, y);
+        } else
+        {
+            _hinweisPositionen.Clear();
+        }
     }
     
     public void Draw(SpriteBatch sb, int width, int height)
@@ -76,7 +186,20 @@ public class Schachbrett
         {
             for (int y = 0; y < 8; y++)
             {
-                Brett[x][y].Draw(sb, x * Feldbreite, y * Feldhöhe, Feldbreite, Feldhöhe);
+                // Überprüfen ob die Position die eines Königs ist.
+                Vector2 pos = new Vector2(x, y);
+
+                bool imSchach = false;
+                if (pos == _weisserKönig)
+                {
+                    imSchach = ImSchach(true);
+                }
+                if (pos == _schwarzerKönig)
+                {
+                    imSchach = ImSchach(false);
+                }
+
+                Brett[x][y].Draw(sb, x * Feldbreite, y * Feldhöhe, Feldbreite, Feldhöhe, _hinweisPositionen.Contains(new Vector2(x, y)), imSchach);
             }
         }
     }

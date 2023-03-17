@@ -8,14 +8,19 @@ public class Bauer : ISchachfigur
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
     public bool IstSchwarz { get; set; }
+    public bool IstWeiss => !IstSchwarz;
 
     public bool HasMoved2 { get; set; }
+
+    
+    public event BewegtHandler Bewegt;
 
     public Bauer(bool istSchwarz = false)
     {
         IstSchwarz = istSchwarz;
         HasMoved2 = false;
     }
+
 
     public void Draw(SpriteBatch sb, int x, int y, int width, int height, bool isBlackField)
     {
@@ -37,22 +42,34 @@ public class Bauer : ISchachfigur
     {
         List<Vector2> toReturn = new List<Vector2>();
 
-        void AddIfPossible(int xO, int yO)
+        void AddIfPossible(int yO)
+        {
+            SchachbrettFeld feld = schachbrett.GetFeld(x, y + yO);
+            if (feld != null && feld.Figur == null)
+                toReturn.Add(new Vector2(x, y + yO));
+        }
+
+        void AddIfPoissibleCatch(int xO, int yO)
         {
             SchachbrettFeld feld = schachbrett.GetFeld(x + xO, y + yO);
-            if (feld != null && (feld.Figur is ISchachfigur sf && sf.IstSchwarz != IstSchwarz || feld.Figur == null))
+            if (feld != null && (feld.Figur is ISchachfigur sf && sf.IstSchwarz != IstSchwarz))
                 toReturn.Add(new Vector2(x + xO, y + yO));
         }
 
-        AddIfPossible(-1, 1);
-        AddIfPossible(-1, 0);
-        AddIfPossible(-1, -1);
-        AddIfPossible(1, 1);
-        AddIfPossible(1, 0);
-        AddIfPossible(1, -1);
-        AddIfPossible(0, -1);
-        AddIfPossible(0, 1);
+        AddIfPossible(IstWeiss ? 1 : -1);
+        if((IstSchwarz && y == 6) || (IstWeiss && y == 1))
+        {
+            AddIfPossible(IstWeiss ? 2 : -2);
+        }
+
+        AddIfPoissibleCatch(1, IstWeiss ? 1 : -1);
+        AddIfPoissibleCatch(-1, IstWeiss ? 1 : -1);
 
         return toReturn;
+    }
+
+    public void Bewege(int x, int y)
+    {
+        Bewegt?.Invoke(x, y);
     }
 }

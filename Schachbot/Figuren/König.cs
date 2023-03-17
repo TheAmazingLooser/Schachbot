@@ -9,6 +9,8 @@ public class König : ISchachfigur
     private static Texture2D _outline { get; set; }
     public bool IstSchwarz { get; set; }
 
+    public event BewegtHandler Bewegt;
+
     public König(bool istSchwarz = false)
     {
         IstSchwarz = istSchwarz;
@@ -51,5 +53,10 @@ public class König : ISchachfigur
         AddIfPossible(0, 1);
 
         return toReturn;
+    }
+
+    public void Bewege(int x, int y)
+    {
+        Bewegt?.Invoke(x, y);
     }
 }

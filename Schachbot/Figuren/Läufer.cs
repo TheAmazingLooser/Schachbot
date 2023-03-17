@@ -9,6 +9,8 @@ public class Läufer : ISchachfigur
     private static Texture2D _outline { get; set; }
     public bool IstSchwarz { get; set; }
 
+    public event BewegtHandler Bewegt;
+
     public Läufer(bool istSchwarz = false)
     {
         IstSchwarz = istSchwarz;
@@ -39,16 +41,25 @@ public class Läufer : ISchachfigur
             if (schachbrett.GetFeld(x + f1, y + f2) is SchachbrettFeld feld && (feld.Figur is ISchachfigur sf && sf.IstSchwarz != IstSchwarz || feld.Figur == null))
             {
                 toReturn.Add(new Vector2(x + f1, y + f2));
-                return true;
+                if (feld.Figur == null)
+                    return true;
+
+                return false;
             }
 
             return false;
         }
 
-        for (int f = 0; f < 7 && AddIfNotSameTeamDiagonal(f, f); f++) ;
-        for (int f = 0; f < 7 && AddIfNotSameTeamDiagonal(-f, f); f++) ;
-        for (int f = 0; f < 7 && AddIfNotSameTeamDiagonal(f, -f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(f, f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(-f, f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(f, -f); f++) ;
+        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(-f, -f); f++) ;
 
         return toReturn;
+    }
+
+    public void Bewege(int x, int y)
+    {
+        Bewegt?.Invoke(x, y);
     }
 }
