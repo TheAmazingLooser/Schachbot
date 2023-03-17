@@ -29,4 +29,27 @@ public class Springer : ISchachfigur
         sb.Draw(_texture, new Rectangle(x,y, width, height), IstSchwarz ? (isBlackField ? SchachGame.FigurSchwarz : SchachGame.FigurSchwarzWeiss) : SchachGame.FigurWeiss);
         sb.Draw(_outline, new Rectangle(x,y, width, height), isBlackField ? (IstSchwarz ? SchachGame.OutlineWeißSchwarz : SchachGame.OutlineWeiss) : SchachGame.OutlineWeißSchwarz);
     }
+
+    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y)
+    {
+        List<Vector2> toReturn = new List<Vector2>();
+
+        void AddIfPossible(int xO, int yO)
+        {
+            SchachbrettFeld feld = schachbrett.GetFeld(x + xO, y + yO);
+            if (feld != null && (feld.Figur is ISchachfigur sf && sf.IstSchwarz != IstSchwarz || feld.Figur == null))
+                toReturn.Add(new Vector2(x + xO, y + yO));
+        }
+
+        AddIfPossible(1, 2);
+        AddIfPossible(-1, 2);
+        AddIfPossible(2, 1);
+        AddIfPossible(2, -1);
+        AddIfPossible(1, -2);
+        AddIfPossible(-1, -2);
+        AddIfPossible(-2, 1);
+        AddIfPossible(-2, -1);
+
+        return toReturn;
+    }
 }

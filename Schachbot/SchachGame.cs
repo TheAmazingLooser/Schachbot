@@ -17,7 +17,7 @@ public class SchachGame : Game
     public static Color FeldWeiss = Color.White;
     public static Color FeldSchwarz = new Color(0.1f, 0.1f, 0.1f);
     public static Color OutlineWeiss = new Color(0.3f, 0.3f, 0.3f);
-    public static Color OutlineSchwarz = new Color(0.1f, 0.1f, 0.1f);
+    public static Color OutlineSchwarz = new Color(0.01f, 0.1f, 0.1f);
     public static Color OutlineWeißSchwarz = new Color(0.02f, 0.02f, 0.02f);
     #endregion
     
@@ -49,9 +49,7 @@ public class SchachGame : Game
     }
 
     protected override void Draw(GameTime gameTime)
-    {
-        GraphicsDevice.Clear(Color.CornflowerBlue);
-        
+    {        
         _sb.Begin(SpriteSortMode.Immediate, BlendState.NonPremultiplied, SamplerState.PointClamp, DepthStencilState.Default, RasterizerState.CullNone);
         
         Brett.Draw(_sb, WIDTH,HEIGHT);
