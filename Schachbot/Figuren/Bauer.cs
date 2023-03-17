@@ -38,7 +38,7 @@ public class Bauer : ISchachfigur
         sb.Draw(_outline, new Rectangle(x,y, width, height), isBlackField ? (IstSchwarz ? SchachGame.OutlineWeißSchwarz : SchachGame.OutlineWeiss) : SchachGame.OutlineWeißSchwarz);
     }
 
-    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y)
+    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y, bool isCapturingOnly = false)
     {
         List<Vector2> toReturn = new List<Vector2>();
 
@@ -56,10 +56,13 @@ public class Bauer : ISchachfigur
                 toReturn.Add(new Vector2(x + xO, y + yO));
         }
 
-        AddIfPossible(IstWeiss ? 1 : -1);
-        if((IstSchwarz && y == 6) || (IstWeiss && y == 1))
+        if (!isCapturingOnly)
         {
-            AddIfPossible(IstWeiss ? 2 : -2);
+            AddIfPossible(IstWeiss ? 1 : -1);
+            if ((IstSchwarz && y == 6) || (IstWeiss && y == 1))
+            {
+                AddIfPossible(IstWeiss ? 2 : -2);
+            }
         }
 
         AddIfPoissibleCatch(1, IstWeiss ? 1 : -1);

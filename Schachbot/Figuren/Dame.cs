@@ -33,7 +33,7 @@ public class Dame : ISchachfigur
     }
 
     // GetLegalMoves
-    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y)
+    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y, bool isCapturingOnly = false)
     {
         List<Vector2> toReturn = new List<Vector2>();
 

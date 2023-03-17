@@ -15,8 +15,7 @@ public class Schachbrett
 
     private Vector2 _weisserKönig = new Vector2();
     private Vector2 _schwarzerKönig = new Vector2();
-
-
+    
     public Schachbrett()
     {
         Brett = new SchachbrettFeld[8][];
@@ -65,15 +64,18 @@ public class Schachbrett
         König weiss = new König();
         König schwarz = new König(true);
 
-        weiss.Bewegt += (x, y) => _weisserKönig = new Vector2(x, y);
-        schwarz.Bewegt += (x, y) => _schwarzerKönig = new Vector2(x, y);
+        weiss.Bewegt += (x, y) => KönigBewegt(true, new Vector2(x, y));
+        schwarz.Bewegt += (x, y) => KönigBewegt(false, new Vector2(x, y));
 
         Brett[3][0].SetzeFigur(weiss, 3, 0);
         Brett[3][7].SetzeFigur(schwarz, 3, 7);
-
-        
     }
 
+    private void KönigBewegt(bool weiss, Vector2 pos)
+    {
+        if (weiss) _weisserKönig = pos;
+        else _schwarzerKönig = pos;
+    }
     public void Randomize()
     {
         Random r = new Random();
@@ -93,8 +95,8 @@ public class Schachbrett
             }
         }
     }
-    
-    private bool ImSchach(bool weiss)
+
+    public bool ImSchach(bool weiss)
     {
         Vector2 königPosition = weiss ? _weisserKönig : _schwarzerKönig;
         for (int x = 0; x < 8; x++)
@@ -103,7 +105,7 @@ public class Schachbrett
             {
                 if (Brett[x][y].Figur is ISchachfigur figur && figur.IstWeiss != weiss)
                 {
-                    List<Vector2> moves = figur.GetLegalMoves(this, x, y);
+                    List<Vector2> moves = figur.GetLegalMoves(this, x, y, true);
                     if (moves.Contains(königPosition))
                         return true;
                 }
@@ -112,7 +114,7 @@ public class Schachbrett
 
         return false;
     }
-    
+
     public void Update(GameTime gameTime)
     {
         if (_weissAmZug)
@@ -170,8 +172,63 @@ public class Schachbrett
 
         if (Brett[x][y].Figur is ISchachfigur figur && !figur.IstWeiss)
         {
-            _hinweisPositionen = figur.GetLegalMoves(this, x, y);
-            _hinweisPosition = new Vector2(x, y);
+            Dictionary<Vector2, List<Vector2>> AntiSchachMoves = new Dictionary<Vector2, List<Vector2>>();
+            if (ImSchach(false))
+            {
+                Vector2 altePos = new Vector2(_schwarzerKönig.X, _schwarzerKönig.Y);
+                for (int xS = 0; xS < 8; xS++)
+                {
+                    for (int yS = 0; yS < 8; yS++)
+                    {
+                        if (Brett[xS][yS].Figur is ISchachfigur figurS && !figurS.IstWeiss)
+                        {
+                            List<Vector2> moves = figurS.GetLegalMoves(this, xS, yS);
+                            // Simulieren von einem Move
+                            foreach(var move in moves)
+                            {
+                                var oldFigur = Brett[(int)move.X][(int)move.Y].Figur;
+                                Brett[(int)move.X][(int)move.Y].SetzeFigur(Brett[xS][yS].Figur, (int)move.X, (int)move.Y);
+                                Brett[xS][yS].SetzeFigur(null, xS, yS);
+
+                                if (!ImSchach(false))
+                                {
+                                    if (AntiSchachMoves.ContainsKey(new Vector2(xS, yS)))
+                                        AntiSchachMoves[new Vector2(xS, yS)].Add(move);
+                                    else
+                                        AntiSchachMoves.Add(new Vector2(xS, yS), new List<Vector2>() { move });
+                                }
+                                Brett[xS][yS].SetzeFigur(figurS, xS, yS);
+                                Brett[(int)move.X][(int)move.Y].SetzeFigur(oldFigur, (int)move.X,(int)move.Y);
+                                _schwarzerKönig = altePos;
+                            }
+                        }
+                    }
+                }
+            }
+
+            var curPos = new Vector2(x, y);
+            if (AntiSchachMoves.Count == 0 && ImSchach(false))
+            {
+                // Wir haben verloren == Schachmatt
+            } else if (AntiSchachMoves.Count > 0 && ImSchach(false) && AntiSchachMoves.ContainsKey(curPos))
+            {
+                _hinweisPositionen.Clear();
+                List<Vector2> allPos = figur.GetLegalMoves(this, x, y);
+                foreach(var pos in allPos)
+                {
+                    if (AntiSchachMoves[curPos].Contains(pos))
+                        _hinweisPositionen.Add(pos);
+
+                }
+                _hinweisPosition = new Vector2(x, y);
+            } else if (!ImSchach(false))
+            {
+                _hinweisPositionen = figur.GetLegalMoves(this, x, y);
+                _hinweisPosition = new Vector2(x, y);
+            } else
+            {
+                _hinweisPositionen.Clear();
+            }
         } else
         {
             _hinweisPositionen.Clear();

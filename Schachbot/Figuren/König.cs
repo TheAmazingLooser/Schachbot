@@ -32,7 +32,7 @@ public class König : ISchachfigur
         sb.Draw(_outline, new Rectangle(x,y, width, height), isBlackField ? (IstSchwarz ? SchachGame.OutlineWeißSchwarz : SchachGame.OutlineWeiss) : SchachGame.OutlineWeißSchwarz);
     }
 
-    public List<Vector2> GetLegalMoves(Schachbrett schachbrett, int x, int y)
+    public List<Vector2> GetLegalMoves(Schachbrett schachbrett, int x, int y, bool isCapturingOnly = false)
     {
         List<Vector2> toReturn = new List<Vector2>();
 

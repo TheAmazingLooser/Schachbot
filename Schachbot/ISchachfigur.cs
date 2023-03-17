@@ -12,7 +12,7 @@ public interface ISchachfigur
     
     public void Draw(SpriteBatch sb, int x, int y, int width, int height, bool isBlackField);
 
-    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y);
+    public List<Vector2> GetLegalMoves(Schachbot.Schachbrett schachbrett, int x, int y, bool isCapturingOnly = false);
 
     public event BewegtHandler Bewegt;
     public void Bewege(int x, int y);
