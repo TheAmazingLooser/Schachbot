@@ -45,11 +45,16 @@ public class Pawn : BasePiece, IChessPiece
     {
         List<Vector2> toReturn = new List<Vector2>();
 
-        void AddIfPossible(int yO)
+        bool AddIfPossible(int yO)
         {
             ChessField feld = chessBoard.GetField(x, y + yO);
             if (feld != null && feld.Piece == null)
+            {
                 toReturn.Add(new Vector2(x, y + yO));
+                return true;
+            }
+
+            return false;
         }
 
         void AddIfPoissibleCatch(int xO, int yO)
@@ -61,8 +66,8 @@ public class Pawn : BasePiece, IChessPiece
 
         if (!isCapturingOnly)
         {
-            AddIfPossible(IsWhite ? 1 : -1);
-            if ((IsBlack && y == 6) || (IsWhite && y == 1))
+            var added = AddIfPossible(IsWhite ? 1 : -1);
+            if (added && (IsBlack && y == 6) || (IsWhite && y == 1))
             {
                 AddIfPossible(IsWhite ? 2 : -2);
             }

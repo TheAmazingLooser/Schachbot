@@ -81,7 +81,7 @@ public class ChessGame : Game
         if (lastMouseState.LeftButton == ButtonState.Released && mouseState.LeftButton == ButtonState.Pressed && IsMouseInsideGameWindow(mouseState))
         {
             Console.WriteLine("Klick auf " + mouseState.X + " " + mouseState.Y);
-            Board.Click(WIDTH, HEIGHT);
+            Board.DoPlayerMove(WIDTH, HEIGHT);
         }
 
         lastMouseState = mouseState;

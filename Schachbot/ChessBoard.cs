@@ -119,7 +119,24 @@ public class ChessBoard
     {
         if (_whiteToMove)
         {
-            Dictionary<Vector2, List<Vector2>> botZüge = new Dictionary<Vector2, List<Vector2>>();
+            DoBotMove();
+        }
+    }
+
+    public void DoBotMove()
+    {
+        Dictionary<Vector2, List<Vector2>> AntiSchachMoves = new Dictionary<Vector2, List<Vector2>>();
+        Dictionary<Vector2, List<Vector2>> botZüge = new Dictionary<Vector2, List<Vector2>>();
+        if (IsChecked(true))
+        {
+            botZüge = GetNonCheckingMoves(true);
+
+            if (AntiSchachMoves.Count == 0)
+            {
+                // Schachmatt
+            }
+        } else
+        {
             for (int x = 0; x < 8; x++)
             {
                 for (int y = 0; y < 8; y++)
@@ -132,27 +149,28 @@ public class ChessBoard
                     }
                 }
             }
-
-            if (botZüge.Count > 0)
-            {
-                // Zufälligen Zug auswählen
-                Random r = new Random();
-                int figurPosition = r.Next(0, botZüge.Count);
-                int xStart = (int)botZüge.ElementAt(figurPosition).Key.X;
-                int yStart = (int)botZüge.ElementAt(figurPosition).Key.Y;
-
-                int zug = r.Next(0, botZüge.ElementAt(figurPosition).Value.Count);
-                int xZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).X;
-                int yZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).Y;
-
-                Board[xZiel][yZiel].PlacePiece(Board[xStart][yStart].Piece);
-                Board[xStart][yStart].PlacePiece(null);
-            }
-            _whiteToMove = false;
         }
+
+
+        if (botZüge.Count > 0)
+        {
+            // Zufälligen Zug auswählen
+            Random r = new Random();
+            int figurPosition = r.Next(0, botZüge.Count);
+            int xStart = (int)botZüge.ElementAt(figurPosition).Key.X;
+            int yStart = (int)botZüge.ElementAt(figurPosition).Key.Y;
+
+            int zug = r.Next(0, botZüge.ElementAt(figurPosition).Value.Count);
+            int xZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).X;
+            int yZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).Y;
+
+            Board[xZiel][yZiel].PlacePiece(Board[xStart][yStart].Piece);
+            Board[xStart][yStart].PlacePiece(null);
+        }
+        _whiteToMove = false;
     }
 
-    public void Click(int width, int height)
+    public void DoPlayerMove(int width, int height)
     {
         MouseState ms = Mouse.GetState();
         int Feldbreite = width / 8;
@@ -175,35 +193,7 @@ public class ChessBoard
             Dictionary<Vector2, List<Vector2>> AntiSchachMoves = new Dictionary<Vector2, List<Vector2>>();
             if (IsChecked(false))
             {
-                Vector2 altePos = new Vector2(_blackKingPosition.X, _blackKingPosition.Y);
-                for (int xS = 0; xS < 8; xS++)
-                {
-                    for (int yS = 0; yS < 8; yS++)
-                    {
-                        if (Board[xS][yS].Piece is IChessPiece figurS && !figurS.IsWhite)
-                        {
-                            List<Vector2> moves = figurS.GetLegalMoves(this);
-                            // Simulieren von einem Move
-                            foreach(var move in moves)
-                            {
-                                var oldFigur = Board[(int)move.X][(int)move.Y].Piece;
-                                Board[(int)move.X][(int)move.Y].PlacePiece(Board[xS][yS].Piece);
-                                Board[xS][yS].PlacePiece(null);
-
-                                if (!IsChecked(false))
-                                {
-                                    if (AntiSchachMoves.ContainsKey(new Vector2(xS, yS)))
-                                        AntiSchachMoves[new Vector2(xS, yS)].Add(move);
-                                    else
-                                        AntiSchachMoves.Add(new Vector2(xS, yS), new List<Vector2>() { move });
-                                }
-                                Board[xS][yS].PlacePiece(figurS);
-                                Board[(int)move.X][(int)move.Y].PlacePiece(oldFigur);
-                                _blackKingPosition = altePos;
-                            }
-                        }
-                    }
-                }
+                AntiSchachMoves = GetNonCheckingMoves(false);
             }
 
             var curPos = new Vector2(x, y);
@@ -233,6 +223,47 @@ public class ChessBoard
         {
             _hintPositions.Clear();
         }
+    }
+
+    private Dictionary<Vector2, List<Vector2>> GetNonCheckingMoves(bool isWhite)
+    {
+        Dictionary<Vector2, List<Vector2>> AntiSchachMoves = new Dictionary<Vector2, List<Vector2>>();
+        Vector2 altePos = new Vector2(_blackKingPosition.X, _blackKingPosition.Y);
+        if (isWhite)
+            altePos = new Vector2(_whiteKingPosition.X, _whiteKingPosition.Y);
+        for (int xS = 0; xS < 8; xS++)
+        {
+            for (int yS = 0; yS < 8; yS++)
+            {
+                if (Board[xS][yS].Piece is IChessPiece figurS && isWhite == figurS.IsWhite)
+                {
+                    List<Vector2> moves = figurS.GetLegalMoves(this);
+                    // Simulieren von einem Move
+                    foreach (var move in moves)
+                    {
+                        var oldFigur = Board[(int)move.X][(int)move.Y].Piece;
+                        Board[(int)move.X][(int)move.Y].PlacePiece(Board[xS][yS].Piece);
+                        Board[xS][yS].PlacePiece(null);
+
+                        if (!IsChecked(isWhite))
+                        {
+                            if (AntiSchachMoves.ContainsKey(new Vector2(xS, yS)))
+                                AntiSchachMoves[new Vector2(xS, yS)].Add(move);
+                            else
+                                AntiSchachMoves.Add(new Vector2(xS, yS), new List<Vector2>() { move });
+                        }
+                        Board[xS][yS].PlacePiece(figurS);
+                        Board[(int)move.X][(int)move.Y].PlacePiece(oldFigur);
+                        if (isWhite)
+                            _whiteKingPosition = altePos;
+                        else
+                            _blackKingPosition = altePos;
+                    }
+                }
+            }
+        }
+
+        return AntiSchachMoves;
     }
     
     public void Draw(SpriteBatch sb, int width, int height)
