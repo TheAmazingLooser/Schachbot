@@ -7,7 +7,7 @@ namespace Schachbot
     {
         static void Main(string[] args)
         {
-            using (SchachGame g = new SchachGame())
+            using (ChessGame g = new ChessGame())
             {
                 g.Run();
             }

@@ -8,41 +8,42 @@ using System.Threading.Tasks;
 
 namespace Schachbot
 {
-    public class SchachbrettFeld
+    public class ChessField
     {
         private bool _redraw = true;
         private bool _redrawHighlight = false;
         private bool _redrawSchach = false;
         private static Texture2D _texture;
 
-        public bool IstSchwarz { get; }
-        public bool IstWeiss => !IstSchwarz;
-        public ISchachfigur Figur { get; private set; }
+        public int x { get; private set; }
+        public int y { get; private set; }
 
-        public SchachbrettFeld(bool istSchwarz)
+        public bool IsBlack { get; }
+        public bool IsWhite => !IsBlack;
+        public IChessPiece Piece { get; private set; }
+
+        public ChessField(bool black, int x, int y)
         {
-            IstSchwarz = istSchwarz;
+            IsBlack = black;
             _redraw = true;
+            this.x = x;
+            this.y = y;
         }
 
         // Funktion zum setzen der Figur
-        public void SetzeFigur(ISchachfigur figur, int x, int y)
+        public void PlacePiece(IChessPiece piece)
         {
             _redraw = true;
-            Figur = figur;
-            if (Figur != null)
-                Figur.Bewege(x, y);
-        }
-
-        public void LöscheFigur()
-        {
-            _redraw = true;
-            Figur = null;
+            Piece = piece;
+            if (Piece != null)
+                Piece.MoveTo(x, y);
         }
 
         // Funktion zum Zeichnen des Feldes
-        public void Draw(SpriteBatch sb, int x, int y, int width, int height, bool highlight = false, bool schach = false)
+        public void Draw(SpriteBatch sb, int width, int height, bool highlight = false, bool schach = false)
         {
+            int drawX = x * width;
+            int drawY = y * height;
             if (_redraw || _texture == null || (_redrawHighlight != highlight) || _redrawSchach != schach)
             {
                 _redrawSchach = schach;
@@ -57,16 +58,16 @@ namespace Schachbot
                     _texture.SetData(data);
                 }
                 _redraw = false;
-                sb.Draw(_texture, new Rectangle(x, y, width, height), schach ? SchachGame.FeldSchach : (IstSchwarz ? SchachGame.FeldSchwarz : SchachGame.FeldWeiss));
+                sb.Draw(_texture, new Rectangle(drawX, drawY, width, height), schach ? ChessGame.FieldCheck : (IsBlack ? ChessGame.FieldBlack : ChessGame.FieldWhite));
                 // Wenn das Filg ein highlight hat, dann zeichne es
                 if (highlight)
                 {
-                    sb.Draw(_texture, new Rectangle(x + width / 4, y + height / 4, width / 2, height / 2), SchachGame.FeldHighlight);
+                    sb.Draw(_texture, new Rectangle(drawX + width / 4, drawY + height / 4, width / 2, height / 2), ChessGame.FieldHighlight);
                 }
                 
-                if (Figur != null)
+                if (Piece != null)
                 {
-                    Figur.Draw(sb, x, y, width, height, IstSchwarz);
+                    Piece.Draw(sb, width, height, IsBlack);
                 }
             }
         }
