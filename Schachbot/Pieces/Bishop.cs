@@ -48,4 +48,12 @@ public class Bishop : BasePiece, IChessPiece
 
         return toReturn;
     }
+
+    public string FEN_Name()
+    {
+        if (IsBlack)
+            return "b";
+        else
+            return "B";
+    }
 }

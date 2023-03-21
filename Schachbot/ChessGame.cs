@@ -12,9 +12,12 @@ public class ChessGame : Game
 
     private MouseState lastMouseState;
 
+    private MouseState drawingStartPosition;
+    private MouseState drawingEndPosition;
+
     #region Farben
 
-    public static Color PieceWhite = Color.White;
+    public static Color PieceWhite = Color.MintCream;
     public static Color PieceBlack = new Color(0.2f, 0.2f, 0.2f);
     public static Color PieceBlackWhite = new Color(0.15f, 0.15f, 0.15f);
     public static Color FieldWhite = Color.White;
@@ -51,7 +54,7 @@ public class ChessGame : Game
         
         // Erstelle ein neues Schachbrett
         Board = new ChessBoard();
-        Board.InitializeField();
+        Board.InitializeField("rnbqkbnr/pp1ppppp/8/8/2pP3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2");
         //Brett.Randomize();
         //Brett.InitialisiereBrettRandom();
 
@@ -82,6 +85,22 @@ public class ChessGame : Game
         {
             Console.WriteLine("Klick auf " + mouseState.X + " " + mouseState.Y);
             Board.DoPlayerMove(WIDTH, HEIGHT);
+        }
+
+        if (lastMouseState.RightButton == ButtonState.Released && mouseState.RightButton == ButtonState.Pressed && IsMouseInsideGameWindow(mouseState))
+        {
+            Console.WriteLine("Rechtsklick auf " + mouseState.X + " " + mouseState.Y);
+            drawingStartPosition = mouseState;
+        } else if (lastMouseState.RightButton == ButtonState.Pressed && mouseState.RightButton == ButtonState.Pressed && IsMouseInsideGameWindow(mouseState))
+        {
+            if (lastMouseState.X != mouseState.X || lastMouseState.Y != mouseState.Y)
+            {
+                drawingEndPosition = mouseState;
+            }
+        }
+        else if (lastMouseState.RightButton == ButtonState.Pressed && mouseState.RightButton == ButtonState.Released)
+        {
+            Board.HandleArrow(new Vector2(drawingStartPosition.X, drawingStartPosition.Y), new Vector2(drawingEndPosition.X, drawingEndPosition.Y), WIDTH, HEIGHT);
         }
 
         lastMouseState = mouseState;

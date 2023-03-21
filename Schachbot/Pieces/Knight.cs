@@ -53,4 +53,12 @@ public class Knight : BasePiece, IChessPiece
 
         return toReturn;
     }
+
+    public string FEN_Name()
+    {
+        if (IsBlack)
+            return "n";
+        else
+            return "N";
+    }
 }

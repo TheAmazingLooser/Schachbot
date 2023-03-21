@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Schachbot;
 
-public delegate void MovedHandler(int x, int y);
+public delegate void MovedHandler(int fromX, int fromY, int toX, int toY);
 
 public interface IChessPiece
 {
@@ -19,4 +19,6 @@ public interface IChessPiece
 
     public event MovedHandler Moved;
     public void MoveTo(int x, int y);
+
+    public string FEN_Name();
 }

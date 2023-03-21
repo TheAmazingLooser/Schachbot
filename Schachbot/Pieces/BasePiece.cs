@@ -65,9 +65,11 @@ namespace Schachbot.Pieces
 
         public virtual void MoveTo(int x, int y)
         {
+            int oldX = this.x;
+            int oldY = this.y;
             this.x = x;
             this.y = y;
-            Moved?.Invoke(x, y);
+            Moved?.Invoke(oldX, oldY, x, y);
         }
         
         public virtual Texture2D GetTexture(SpriteBatch sb)
@@ -120,6 +122,11 @@ namespace Schachbot.Pieces
                 toReturn.Add(new Vector2(x + xO, y + yO));
 
             return true;
+        }
+
+        public string FEN_Name()
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -50,4 +50,12 @@ public class Rook : BasePiece, IChessPiece
 
         return toReturn;
     }
+
+    public string FEN_Name()
+    {
+        if (IsBlack)
+            return "r";
+        else
+            return "R";
+    }
 }

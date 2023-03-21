@@ -60,4 +60,12 @@ public class King : BasePiece, IChessPiece
 
         return toReturn;
     }
+
+    public string FEN_Name()
+    {
+        if (IsBlack)
+            return "k";
+        else
+            return "K";
+    }
 }
