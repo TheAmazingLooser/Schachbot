@@ -36,10 +36,12 @@ namespace Schachbot.Bot
 
                             foreach(Vector2 move in currentLegalMoves)
                             {
-                                boardCopy[(int)move.X][(int)move.Y].PlacePiece(boardCopy[field.x][(field.y)].Piece);
-                                boardCopy[field.x][field.y].PlacePiece(null);
+                                currentMove.Add(move);
+                                boardCopy.DoBotMove(currentMove);
 
-                                currentMaterialAdvantage = GetMaterialCount(boardCopy);
+                                currentMove.RemoveAt(currentMove.Count - 1);
+
+                                currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
 
                                 if (currentMaterialAdvantage == biggestMaterialAdvantage && bestMove == null)
                                 {
@@ -67,26 +69,29 @@ namespace Schachbot.Bot
             }
             else
             {
-                foreach (ChessField[] rank in boardCopy)
+                foreach (ChessField[] rank in boardCopy.Board)
                 {
                     foreach (ChessField field in rank)
                     {
                         if (field.Piece != null && field.Piece.IsBlack)
                         {
-                            currentLegalMoves = field.Piece.GetLegalMoves(new ChessBoard() { Board = boardCopy });
+                            currentMove = new List<Vector2>
+                            {
+                                new Vector2(field.x, field.y)
+                            };
+
+                            currentLegalMoves = field.Piece.GetLegalMoves(new ChessBoard() { Board = boardCopy.Board });
 
                             foreach (Vector2 move in currentLegalMoves)
                             {
-                                currentMove = new List<Vector2>();
-                                currentMove.Add(new Vector2(field.x, field.y));
                                 currentMove.Add(move);
+                                boardCopy.DoBotMove(currentMove);
 
-                                boardCopy[(int)move.X][(int)move.Y].PlacePiece(boardCopy[field.x][(field.y)].Piece);
-                                boardCopy[field.x][field.y].PlacePiece(null);
+                                currentMove.RemoveAt(currentMove.Count - 1);
 
-                                currentMaterialAdvantage = GetMaterialCount(boardCopy);
+                                currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
 
-                                if(currentMaterialAdvantage == biggestMaterialAdvantage && bestMove == null)
+                                if (currentMaterialAdvantage == biggestMaterialAdvantage && bestMove == null)
                                 {
                                     bestMove = new List<Vector2>();
                                     bestMove.Add(new Vector2(field.x, field.y));
@@ -97,9 +102,8 @@ namespace Schachbot.Bot
                                 {
                                     biggestMaterialAdvantage = currentMaterialAdvantage;
                                     bestMove = new List<Vector2>();
-                                    bestMove.Add(new Vector2(field.x,field.y));
+                                    bestMove.Add(new Vector2(field.x, field.y));
                                     bestMove.Add(move);
-                                                                    
                                 }
 
                                 CreateBoardCopy(board, ref boardCopy);
