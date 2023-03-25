@@ -18,6 +18,7 @@ namespace Schachbot.Pieces
         public int x { get; protected set; }
         public int y { get; protected set; }
 
+
         /// <summary>
         /// Always return the inverse of IsBlack (!IsBlack)!
         /// </summary>

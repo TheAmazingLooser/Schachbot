@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Schachbot.Bot;
 using Schachbot.Pieces;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -246,7 +247,9 @@ public class ChessBoard
     {
         if (_whiteToMove)
         {
-            DoBotMove();
+            DoBotMove(Evaluation.GetBestMove(this, 0, true));
+
+            _whiteToMove = false;
         }
     }
 
@@ -264,35 +267,22 @@ public class ChessBoard
         }
     }
 
-    public void DoBotMove()
+    public void DoBotMove(List<Vector2> move)
     {
-        Dictionary<Vector2, List<Vector2>> botZüge = GetNonCheckingMoves(true);
+        int xStart = (int)move[0].X;
 
-        if (botZüge.Count > 0)
-        {
-            // Zufälligen Zug auswählen
-            Random r = new Random();
-            int figurPosition = r.Next(0, botZüge.Count);
-            int xStart = (int)botZüge.ElementAt(figurPosition).Key.X;
-            int yStart = (int)botZüge.ElementAt(figurPosition).Key.Y;
+        int yStart = (int)move[0].Y;
+        int xEnd = (int)move[1].X;
+        int yEnd = (int)move[1].Y;
 
-            int zug = r.Next(0, botZüge.ElementAt(figurPosition).Value.Count);
-            int xZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).X;
-            int yZiel = (int)botZüge.ElementAt(figurPosition).Value.ElementAt(zug).Y;
+        
 
-            Board[xZiel][yZiel].PlacePiece(Board[xStart][yStart].Piece);
-            Board[xStart][yStart].PlacePiece(null);
-
-            ConvertPawnsToQueens();
-
-            UpdatePawn2Move(false);
-        } else if (botZüge.Count == 0 && IsChecked(true))
-        {
-            // Schachmatt
-        } else if (botZüge.Count == 0)
-        {
-            // Patt
-        }
+        Board[xEnd][yEnd].PlacePiece(Board[xStart][yStart].Piece);
+        Board[xStart][yStart].PlacePiece(null);
+        
+        ConvertPawnsToQueens();
+        //UpdatePawn2Move(false);
+        
         _whiteToMove = false;
     }
 

@@ -8,6 +8,7 @@ public class Knight : BasePiece, IChessPiece
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
 
+    
     public Knight(bool isBlack = false)
     {
         IsBlack = isBlack;
@@ -61,4 +62,5 @@ public class Knight : BasePiece, IChessPiece
         else
             return "N";
     }
+
 }

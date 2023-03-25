@@ -62,4 +62,5 @@ public class Queen : BasePiece, IChessPiece
         else
             return "Q";
     }
+
 }

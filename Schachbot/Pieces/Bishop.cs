@@ -8,6 +8,7 @@ public class Bishop : BasePiece, IChessPiece
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
 
+
     public Bishop(bool isBlack = false)
     {
         IsBlack = isBlack;
@@ -56,4 +57,5 @@ public class Bishop : BasePiece, IChessPiece
         else
             return "B";
     }
+
 }
