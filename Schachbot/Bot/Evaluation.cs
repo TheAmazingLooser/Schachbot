@@ -21,13 +21,17 @@ namespace Schachbot.Bot
 
         public static bool Stop = false;
 
-        private static ConcurrentBag<Thread> runningThreads = new ConcurrentBag<Thread>();
+        private static ConcurrentDictionary<Thread, int> runningThreads = new ConcurrentDictionary<Thread, int>();
 
         public static void GetBestMove(ChessBoard board, int depth, bool isWhitesTurn, KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? bestMove = null)
         {
-            if (Stop || depth >= MaxDepth) return;
             Thread t = new Thread(() =>
             {
+                if (Stop || depth >= MaxDepth || (((HighestScore > CHECKMATE_ADVANTAGE && isWhitesTurn) || (HighestScore < -1 * CHECKMATE_ADVANTAGE && !isWhitesTurn)) && depth >= Depth))
+                {
+                    runningThreads.TryRemove(new KeyValuePair<Thread, int>(Thread.CurrentThread, depth));
+                    return;
+                }
                 List<Vector2> currentMove;
 
                 int biggestMaterialAdvantage = GetMaterialCount(board.Board);
@@ -48,13 +52,32 @@ namespace Schachbot.Bot
 
                 Dictionary<Vector2, List<Vector2>> AntiCheckMoves = board.GetNonCheckingMoves(isWhitesTurn);
 
-                if (AntiCheckMoves.Count == 0) return;
+                if (AntiCheckMoves.Count == 0)
+                {
+                    runningThreads.TryRemove(new KeyValuePair<Thread, int>(Thread.CurrentThread, depth));
+                    return;
+                }
+                try
+                {
+                    while (runningThreads.Values.Min() < depth && !Stop)
+                    {
+                        Thread.Sleep(10);
+                    }
+                } catch
+                {
+                    runningThreads.TryRemove(new KeyValuePair<Thread, int>(Thread.CurrentThread, depth));
+                    return;
+                }
 
                 for (int x = 0; x < 8; x++)
                 {
                     for (int y = 0; y < 8; y++)
                     {
-                        if (Stop) return;
+                        if (Stop || (((HighestScore > CHECKMATE_ADVANTAGE && isWhitesTurn) || (HighestScore < -1 * CHECKMATE_ADVANTAGE && !isWhitesTurn)) && depth >= Depth))
+                        {
+                            runningThreads.TryRemove(new KeyValuePair<Thread, int>(Thread.CurrentThread, depth));
+                            return;
+                        }
                         Vector2 Pos = new Vector2(x, y);
                         if (AntiCheckMoves.ContainsKey(Pos))
                         {
@@ -83,12 +106,18 @@ namespace Schachbot.Bot
                                     }
                                 }
 
-                                UpdateBestMove(boardCopy, !isWhitesTurn);
+                                if (UpdateBestMove(boardCopy, !isWhitesTurn))
                                 {
+                                    if (BestMove == null || (currentMaterialAdvantage >= HighestScore && isWhitesTurn) || (currentMaterialAdvantage <= HighestScore && !isWhitesTurn))
+                                    {
+                                        BestMove = bestMove;
+                                        HighestScore = currentMaterialAdvantage;
+                                        Depth = depth;
+                                        FieldString = board.ToString();
+                                    }
                                     GetBestMove(boardCopy, depth + 1, isWhitesTurn, bestMove);
-
-                                    currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
-
+                                } else
+                                {
                                     if (BestMove == null || (currentMaterialAdvantage >= HighestScore && isWhitesTurn) || (currentMaterialAdvantage <= HighestScore && !isWhitesTurn))
                                     {
                                         BestMove = bestMove;
@@ -97,7 +126,6 @@ namespace Schachbot.Bot
                                         FieldString = board.ToString();
                                     }
                                 }
-
                             }
                         }
                     }
@@ -105,16 +133,19 @@ namespace Schachbot.Bot
 
                 if (depth == 0 && BestMove == null)
                     BestMove = bestMove;
+
+                runningThreads.TryRemove(new KeyValuePair<Thread, int>(Thread.CurrentThread, depth));
             });
+            runningThreads.TryAdd(t, depth);
             t.Start();
-            runningThreads.Add(t);
         }
 
         public static bool IsStillRunning()
         {
             try
             {
-                return Evaluation.runningThreads.Where(t => t.ThreadState == ThreadState.Running).Count() > 0;
+                int c = Evaluation.runningThreads.Count();
+                return c > 0;
             }
             catch (Exception ex)
             {
@@ -124,6 +155,7 @@ namespace Schachbot.Bot
 
         public static void Init()
         {
+            runningThreads.Clear();
             BestMove = null;
             HighestScore = 0;
             Stop = false;
@@ -147,6 +179,8 @@ namespace Schachbot.Bot
 
             Dictionary<Vector2, List<Vector2>> AntiCheckMoves = board.GetNonCheckingMoves(isWhitesTurn);
 
+            if (AntiCheckMoves.Count == 0) return false;
+
             for (int x = 0; x < 8; x++)
             {
                 for (int y = 0; y < 8; y++)
@@ -166,15 +200,63 @@ namespace Schachbot.Bot
                             boardCopy.DoMove(currentMove);
                             currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
 
-                            if ((currentMaterialAdvantage > biggestMaterialAdvantage && isWhitesTurn) || (currentMaterialAdvantage < biggestMaterialAdvantage && !isWhitesTurn))
+                            if (bestMove == null || (currentMaterialAdvantage > biggestMaterialAdvantage && isWhitesTurn) || (currentMaterialAdvantage < biggestMaterialAdvantage && !isWhitesTurn))
                             {
                                 bestMove = new KeyValuePair<Vector2, KeyValuePair<Vector2, int>>(Pos, new KeyValuePair<Vector2, int>(move, currentMaterialAdvantage));
                                 biggestMaterialAdvantage = currentMaterialAdvantage;
                             }
+                        }
+                    }
+                }
+            }
 
-                            if (bestMove == null)
+            if (bestMove != null)
+            {
+                board.DoBotMove(new List<Vector2>
+                {
+                    bestMove.Value.Key,
+                    bestMove.Value.Value.Key
+                });
+                return true;
+            }
+            return false;
+        }
+
+        private static bool UpdateBestMoveFutureMoves(ChessBoard board, bool isWhitesTurn)
+        {
+            List<Vector2> currentMove;
+
+            KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? bestMove = null;
+
+
+            Dictionary<Vector2, List<Vector2>> AntiCheckMoves = board.GetNonCheckingMoves(isWhitesTurn);
+            int MaxNonCheckingMoves = 9000;
+
+            if (AntiCheckMoves.Count == 0) return false;
+
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 8; y++)
+                {
+                    Vector2 Pos = new Vector2(x, y);
+                    if (AntiCheckMoves.ContainsKey(Pos))
+                    {
+                        foreach (Vector2 move in AntiCheckMoves[Pos])
+                        {
+                            var boardCopy = CreateBoardCopy(board);
+                            currentMove = new List<Vector2>
                             {
-                                bestMove = new KeyValuePair<Vector2, KeyValuePair<Vector2, int>>(Pos, new KeyValuePair<Vector2, int>(move, currentMaterialAdvantage));
+                                Pos,
+                                move
+                            };
+
+                            boardCopy.DoMove(currentMove);
+                            int newNonCheckingMoves = board.GetNonCheckingMoves(!isWhitesTurn).Count;
+
+                            if (bestMove == null || newNonCheckingMoves < MaxNonCheckingMoves)
+                            {
+                                bestMove = new KeyValuePair<Vector2, KeyValuePair<Vector2, int>>(Pos, new KeyValuePair<Vector2, int>(move, GetMaterialCount(board.Board)));
+                                MaxNonCheckingMoves = newNonCheckingMoves;
                             }
                         }
                     }

@@ -21,7 +21,10 @@ public class ChessBoard
 
     private List<KeyValuePair<Vector2, Vector2>> _arrowList = new List<KeyValuePair<Vector2, Vector2>>();
     private int _arrowCount = 0;
-    
+
+    private double _elapsedMsBotMove = 0;
+    private int _botMaxMoveDelay = 5000;
+
     public ChessBoard()
     {
         Random r = new Random();
@@ -257,44 +260,38 @@ public class ChessBoard
     {
         if (_whiteToMove)
         {
-
-            Random r = new Random();
-            Evaluation.Init();
-            Evaluation.GetBestMove(this, 0, true, null);
-
-            int ms = r.Next(20000, 30000);
-
-            int i = 0;
-            while(i < ms && Evaluation.IsStillRunning())
-            {
-                i += 10;
-                Thread.Sleep(10);
-            }
-
-
-            if (Evaluation.BestMove == null)
-            {
-                Console.WriteLine("Bot did not found a move in " + ms + "ms! Waiting a bit more...");
-                int c = 0;
-                while (Evaluation.BestMove == null)
-                {
-                    Thread.Sleep(10);
-                    c++;
-                }
-                ms = ms + c * 10;
-                Console.WriteLine("Bot foud a move after " + ms + "ms!");
-            }
-            Evaluation.Stop = true;
-
-            Console.WriteLine("Best move: " + Evaluation.BestMove.Value.Key + " -> " + Evaluation.BestMove.Value.Value.Key + " (" + Evaluation.GetMaterialCount(Board) + " -> " + Evaluation.HighestScore + "). Thought for " + ms + " ms. Depth -> " + Evaluation.Depth + " == " + Evaluation.FieldString);
-
-            DoBotMove(new List<Vector2>{
-                Evaluation.BestMove.Value.Key,
-                Evaluation.BestMove.Value.Value.Key
-            });
             
+            if (_elapsedMsBotMove == 0 && !Evaluation.IsStillRunning())
+            {
+                _elapsedMsBotMove = gameTime.TotalGameTime.TotalMilliseconds;
+                Evaluation.Init();
+                Evaluation.GetBestMove(this, 0, true, null);
+            } else
+            {
+                if (gameTime.TotalGameTime.TotalMilliseconds - _elapsedMsBotMove >= _botMaxMoveDelay || gameTime.IsRunningSlowly)
+                {
+                    Evaluation.Stop = true;
+                }
 
-            _whiteToMove = false;
+                if (!Evaluation.IsStillRunning())
+                {
+                    if (Evaluation.BestMove == null)
+                    {
+                        Console.WriteLine("Player WON by checkmate!");
+                    } else
+                    {
+                        Console.WriteLine("Best move: " + Evaluation.BestMove.Value.Key + " -> " + Evaluation.BestMove.Value.Value.Key + " (" + Evaluation.GetMaterialCount(Board) + " -> " + Evaluation.HighestScore + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + Evaluation.Depth + " == " + Evaluation.FieldString);
+
+                        DoBotMove(new List<Vector2>{
+                        Evaluation.BestMove.Value.Key,
+                        Evaluation.BestMove.Value.Value.Key
+                        });
+                    }
+
+                    _elapsedMsBotMove = 0;
+                    _whiteToMove = false;
+                }
+            }
         }
     }
 
