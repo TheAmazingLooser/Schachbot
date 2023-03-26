@@ -54,7 +54,7 @@ public class ChessGame : Game
         
         // Erstelle ein neues Schachbrett
         Board = new ChessBoard();
-        Board.InitializeField("rnbqkbnr/8/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq - 0 2");
+        Board.InitializeField("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
         //Brett.Randomize();
         //Brett.InitialisiereBrettRandom();
 

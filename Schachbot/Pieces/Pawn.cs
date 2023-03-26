@@ -14,6 +14,7 @@ public class Pawn : BasePiece, IChessPiece
 
     public Pawn(bool isBlack = false)
     {
+        MaterialValue = 10;
         IsBlack = isBlack;
         HasMoved2 = false;
 
@@ -22,6 +23,23 @@ public class Pawn : BasePiece, IChessPiece
             if(!SuppressMoveEvent)
             {
                 HasMoved2 = Math.Abs(fY - tY) == 2;
+            }
+        };
+    }
+
+    public Pawn(Pawn p)
+    {
+        y = p.y;
+        x = p.x;
+        IsBlack = p.IsBlack;
+        MaterialValue = p.MaterialValue;
+        HasMoved2 = p.HasMoved2;
+        Moved += (fX, fY, tX, tY) =>
+        {
+            if (!SuppressMoveEvent)
+            {
+                if (Math.Abs(fY - tY) == 1)
+                    HasMoved2 = false;
             }
         };
     }

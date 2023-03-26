@@ -18,6 +18,8 @@ namespace Schachbot.Pieces
         public int x { get; protected set; }
         public int y { get; protected set; }
 
+        public int MaterialValue { get; protected set; }
+
 
         /// <summary>
         /// Always return the inverse of IsBlack (!IsBlack)!
@@ -37,7 +39,16 @@ namespace Schachbot.Pieces
         /// <param name="isBlack">Parameter to determine wheter the piece is black (<paramref name="isBlack"/> = true). Defaults to false.</param>
         public BasePiece(bool isBlack = false)
         {
+            MaterialValue = 0;
             IsBlack = isBlack;
+        }
+
+        public BasePiece(BasePiece p)
+        {
+            y = p.y;
+            x = p.x;
+            IsBlack = p.IsBlack;
+            MaterialValue = p.MaterialValue;
         }
 
         /// <summary>

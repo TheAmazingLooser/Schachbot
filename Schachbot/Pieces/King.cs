@@ -11,7 +11,16 @@ public class King : BasePiece, IChessPiece
 
     public King(bool isBlack = false)
     {
+        MaterialValue = 999;
         IsBlack = isBlack;
+    }
+
+    public King(King p)
+    {
+        y = p.y;
+        x = p.x;
+        IsBlack = p.IsBlack;
+        MaterialValue = p.MaterialValue;
     }
 
     public override Texture2D GetTexture(SpriteBatch sb)

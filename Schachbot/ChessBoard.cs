@@ -247,7 +247,36 @@ public class ChessBoard
     {
         if (_whiteToMove)
         {
-            DoBotMove(Evaluation.GetBestMove(this, 0, true));
+
+            Random r = new Random();
+            Evaluation.Init();
+            Evaluation.GetBestMove(this, 0, true, null);
+
+            int ms = r.Next(20, 3000);
+            Thread.Sleep(ms);
+
+
+            if (Evaluation.BestMove == null)
+            {
+                Console.WriteLine("Bot did not found a move in " + ms + "ms! Waiting a bit more...");
+                int c = 0;
+                while (Evaluation.BestMove == null)
+                {
+                    Thread.Sleep(10);
+                    c++;
+                }
+                ms = ms + c * 10;
+                Console.WriteLine("Bot foud a move after " + ms + "ms!");
+            }
+            Evaluation.Stop = true;
+
+            Console.WriteLine("Best move: " + Evaluation.BestMove.Value.Key + " -> " + Evaluation.BestMove.Value.Value.Key + " (" + Evaluation.GetMaterialCount(Board) + " -> " + Evaluation.HighestScore + "). Thought for " + ms + " ms. Depth -> " + Evaluation.Depth + " == " + Evaluation.FieldString);
+
+            DoBotMove(new List<Vector2>{
+                Evaluation.BestMove.Value.Key,
+                Evaluation.BestMove.Value.Value.Key
+            });
+            
 
             _whiteToMove = false;
         }
@@ -267,20 +296,24 @@ public class ChessBoard
         }
     }
 
-    public void DoBotMove(List<Vector2> move)
+    public void DoMove(List<Vector2> move)
     {
         int xStart = (int)move[0].X;
-
         int yStart = (int)move[0].Y;
         int xEnd = (int)move[1].X;
         int yEnd = (int)move[1].Y;
 
-        
+
 
         Board[xEnd][yEnd].PlacePiece(Board[xStart][yStart].Piece);
         Board[xStart][yStart].PlacePiece(null);
-        
+
         ConvertPawnsToQueens();
+    }
+
+    public void DoBotMove(List<Vector2> move)
+    {
+        DoMove(move);   
         //UpdatePawn2Move(false);
         
         _whiteToMove = false;
@@ -331,7 +364,7 @@ public class ChessBoard
         if (Board[x][y].Piece is IChessPiece figur && !figur.IsWhite)
         {
             var curPos = new Vector2(x, y);
-            if ((AntiCheckMoves.Count > 0 && IsChecked(false) && AntiCheckMoves.ContainsKey(curPos)) || !IsChecked(false))
+            if ((AntiCheckMoves.Count > 0 && AntiCheckMoves.ContainsKey(curPos)))
             {
                 _hintPositions.Clear();
                 List<Vector2> allPos = figur.GetLegalMoves(this);
@@ -355,7 +388,7 @@ public class ChessBoard
         }
     }
 
-    private Dictionary<Vector2, List<Vector2>> GetNonCheckingMoves(bool isWhite)
+    public Dictionary<Vector2, List<Vector2>> GetNonCheckingMoves(bool isWhite)
     {
         Dictionary<Vector2, List<Vector2>> AntiCheckMoves = new Dictionary<Vector2, List<Vector2>>();
         Vector2 altePos = new Vector2(_blackKingPosition.X, _blackKingPosition.Y);
@@ -433,5 +466,37 @@ public class ChessBoard
         {
             _arrowCount = _arrowList.Count;
         }
+    }
+
+    public override string ToString()
+    {
+        string s = "";
+        for (int y = 0; y < 8; y++)
+        {
+            int i = 0;
+            for (int x = 0; x < 8; x++)
+            {
+                if (Board[x][y].Piece is null)
+                {
+                    i++;
+                }
+                else
+                {
+                    if (i > 0)
+                    {
+                        s += i.ToString();
+                        i = 0;
+                    }
+                    s += Board[x][y].Piece.FEN_Name();
+                }
+            }
+            if (i > 0)
+            {
+                s += i.ToString();
+                i = 0;
+            }
+            s += " / ";
+        }
+        return s;
     }
 }

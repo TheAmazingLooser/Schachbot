@@ -7,11 +7,19 @@ public class Knight : BasePiece, IChessPiece
 {
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
-
     
     public Knight(bool isBlack = false)
     {
+        MaterialValue = 30;
         IsBlack = isBlack;
+    }
+
+    public Knight(Knight p)
+    {
+        y = p.y;
+        x = p.x;
+        IsBlack = p.IsBlack;
+        MaterialValue = p.MaterialValue;
     }
 
     public override Texture2D GetTexture(SpriteBatch sb)

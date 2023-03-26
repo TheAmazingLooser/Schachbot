@@ -10,7 +10,16 @@ public class Rook : BasePiece, IChessPiece
 
     public Rook(bool isBlack = false)
     {
+        MaterialValue = 50;
         IsBlack = isBlack;
+    }
+
+    public Rook(Rook p)
+    {
+        y = p.y;
+        x = p.x;
+        IsBlack = p.IsBlack;
+        MaterialValue = p.MaterialValue;
     }
 
     public override Texture2D GetTexture(SpriteBatch sb)
@@ -43,10 +52,10 @@ public class Rook : BasePiece, IChessPiece
         List<Vector2> toReturn = new List<Vector2>();
 
 
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, -f, false, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, f, false, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, -f, true, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, f, true, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, -f, false, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, f, false, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, -f, true, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, f, true, toReturn); f++) ;
 
         return toReturn;
     }

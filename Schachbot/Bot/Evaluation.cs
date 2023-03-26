@@ -1,127 +1,181 @@
 ﻿using System;
 using Schachbot;
 using Microsoft.Xna.Framework;
+using Schachbot.Pieces;
+using System.Runtime.CompilerServices;
+using System.Reflection.Metadata.Ecma335;
+using Microsoft.Xna.Framework.Content;
 
 namespace Schachbot.Bot
 {
     public static class Evaluation
     {
-        public static List<Vector2> GetBestMove(ChessBoard board, int depth, bool isWhitesTurn)
+        public static int MaxDepth = 50;
+        public static KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? BestMove = null;
+        public static int HighestScore = 0;
+        public static int Depth = 0;
+        public static string FieldString = "";
+
+        public static bool Stop = false;
+
+        public static void GetBestMove(ChessBoard board, int depth, bool isWhitesTurn, KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? bestMove = null)
         {
-            ChessBoard boardCopy = null;
-            CreateBoardCopy(board, ref boardCopy);
-
-            List<Vector2> bestMove = null;
-            List<Vector2> currentMove;
-
-            List<Vector2> currentLegalMoves = new List<Vector2>();
-
-            int biggestMaterialAdvantage = GetMaterialCount(board.Board);
-            int currentMaterialAdvantage;
-
-            if(isWhitesTurn)
+            if (Stop) return;
+            Thread t = new Thread(() =>
             {
-                foreach(ChessField[] rank in boardCopy.Board)
+                List<Vector2> currentMove;
+
+                int biggestMaterialAdvantage = GetMaterialCount(board.Board);
+                int currentMaterialAdvantage = biggestMaterialAdvantage;
+
+                if (depth == 0)
                 {
-                    foreach(ChessField field in rank)
-                    {
-                        if (field.Piece != null && field.Piece.IsWhite)
-                        {
-                            currentMove = new List<Vector2>
-                            {
-                                new Vector2(field.x, field.y)
-                            };
-
-                            currentLegalMoves = field.Piece.GetLegalMoves(new ChessBoard() { Board = boardCopy.Board });
-
-                            foreach(Vector2 move in currentLegalMoves)
-                            {
-                                currentMove.Add(move);
-                                boardCopy.DoBotMove(currentMove);
-
-                                currentMove.RemoveAt(currentMove.Count - 1);
-
-                                currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
-
-                                if (currentMaterialAdvantage == biggestMaterialAdvantage && bestMove == null)
-                                {
-                                    bestMove = new List<Vector2>();
-                                    bestMove.Add(new Vector2(field.x, field.y));
-                                    bestMove.Add(move);
-                                }
-
-                                if (currentMaterialAdvantage > biggestMaterialAdvantage)
-                                {
-                                    biggestMaterialAdvantage = currentMaterialAdvantage;
-                                    bestMove = new List<Vector2>();
-                                    bestMove.Add(new Vector2(field.x, field.y));
-                                    bestMove.Add(move);
-                                }
-
-                                CreateBoardCopy(board, ref boardCopy);
-                            }
-                        }
-
-                    }
-                    
+                    HighestScore = currentMaterialAdvantage;
                 }
 
-            }
-            else
-            {
-                foreach (ChessField[] rank in boardCopy.Board)
+                if ((isWhitesTurn && HighestScore < currentMaterialAdvantage) || (!isWhitesTurn && HighestScore > currentMaterialAdvantage))
                 {
-                    foreach (ChessField field in rank)
+                    BestMove = bestMove;
+                    HighestScore = currentMaterialAdvantage;
+                    Depth = depth;
+                    FieldString = board.ToString();
+                }
+                Dictionary<Vector2, List<Vector2>> AntiCheckMoves = board.GetNonCheckingMoves(isWhitesTurn);
+
+                if (AntiCheckMoves.Count == 0) return;
+
+                for (int x = 0; x < 8; x++)
+                {
+                    for (int y = 0; y < 8; y++)
                     {
-                        if (field.Piece != null && field.Piece.IsBlack)
+                        if (Stop) return;
+                        Vector2 Pos = new Vector2(x, y);
+                        if (AntiCheckMoves.ContainsKey(Pos))
                         {
-                            currentMove = new List<Vector2>
+                            foreach (Vector2 move in AntiCheckMoves[Pos])
                             {
-                                new Vector2(field.x, field.y)
-                            };
-
-                            currentLegalMoves = field.Piece.GetLegalMoves(new ChessBoard() { Board = boardCopy.Board });
-
-                            foreach (Vector2 move in currentLegalMoves)
-                            {
-                                currentMove.Add(move);
-                                boardCopy.DoBotMove(currentMove);
-
-                                currentMove.RemoveAt(currentMove.Count - 1);
-
-                                currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
-
-                                if (currentMaterialAdvantage == biggestMaterialAdvantage && bestMove == null)
+                                ChessBoard boardCopy = CreateBoardCopy(board);
+                                currentMove = new List<Vector2>
                                 {
-                                    bestMove = new List<Vector2>();
-                                    bestMove.Add(new Vector2(field.x, field.y));
-                                    bestMove.Add(move);
+                                    Pos,
+                                    move
+                                };
+
+                                boardCopy.DoMove(currentMove);
+
+                                if (depth == 0)
+                                {
+                                    bestMove = new KeyValuePair<Vector2, KeyValuePair<Vector2, int>>(Pos, new KeyValuePair<Vector2, int>(move, currentMaterialAdvantage));
+                                    currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
+
+                                    if ((currentMaterialAdvantage > HighestScore && isWhitesTurn) || (currentMaterialAdvantage < HighestScore && !isWhitesTurn))
+                                    {
+                                        BestMove = bestMove;
+                                        HighestScore = currentMaterialAdvantage;
+                                        Depth = depth;
+                                        FieldString = board.ToString();
+                                    }
                                 }
 
-                                if (currentMaterialAdvantage < biggestMaterialAdvantage)
+                                if (UpdateBestMove(boardCopy, !isWhitesTurn))
                                 {
-                                    biggestMaterialAdvantage = currentMaterialAdvantage;
-                                    bestMove = new List<Vector2>();
-                                    bestMove.Add(new Vector2(field.x, field.y));
-                                    bestMove.Add(move);
-                                }
+                                    GetBestMove(boardCopy, depth + 1, isWhitesTurn, bestMove);
 
-                                CreateBoardCopy(board, ref boardCopy);
+                                    currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
+
+                                    if (BestMove == null || (currentMaterialAdvantage >= HighestScore && isWhitesTurn) || (currentMaterialAdvantage <= HighestScore && !isWhitesTurn))
+                                    {
+                                        BestMove = bestMove;
+                                        HighestScore = currentMaterialAdvantage;
+                                        Depth = depth;
+                                        FieldString = board.ToString();
+                                    }
+                                }
+                                    
                             }
                         }
-
                     }
-
                 }
 
-            }
-
-            Console.WriteLine(bestMove[0].X.ToString() + " " + bestMove[0].Y.ToString());
-
-            return bestMove;
+                if (depth == 0 && BestMove == null)
+                    BestMove = bestMove;
+            });
+            t.Start();
         }
 
-        private static int GetMaterialCount(ChessField[][] board)
+        public static void Init()
+        {
+            BestMove = null;
+            HighestScore = 0;
+            Stop = false;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="board"></param>
+        /// <param name="isWhitesTurn"></param>
+        /// <returns>A Boolean represents if a move was made. If true a move was made, if false, none was made (checkmate)</returns>
+        private static bool UpdateBestMove(ChessBoard board, bool isWhitesTurn)
+        {
+            List<Vector2> currentMove;
+
+            int biggestMaterialAdvantage = GetMaterialCount(board.Board);
+            int currentMaterialAdvantage = 0;
+
+            KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? bestMove = null;
+
+
+            Dictionary<Vector2, List<Vector2>> AntiCheckMoves = board.GetNonCheckingMoves(isWhitesTurn);
+
+            for (int x = 0; x < 8; x++)
+            {
+                for (int y = 0; y < 8; y++)
+                {
+                    Vector2 Pos = new Vector2(x, y);
+                    if (AntiCheckMoves.ContainsKey(Pos))
+                    {
+                        foreach (Vector2 move in AntiCheckMoves[Pos])
+                        {
+                            var boardCopy = CreateBoardCopy(board);
+                            currentMove = new List<Vector2>
+                            {
+                                Pos,
+                                move
+                            };
+
+                            boardCopy.DoMove(currentMove);
+                            currentMaterialAdvantage = GetMaterialCount(boardCopy.Board);
+
+                            if ((currentMaterialAdvantage > biggestMaterialAdvantage && isWhitesTurn) || (currentMaterialAdvantage < biggestMaterialAdvantage && !isWhitesTurn))
+                            {
+                                bestMove = new KeyValuePair<Vector2, KeyValuePair<Vector2, int>>(Pos, new KeyValuePair<Vector2, int>(move, currentMaterialAdvantage));
+                                biggestMaterialAdvantage = currentMaterialAdvantage;
+                            }
+
+                            if (bestMove == null)
+                            {
+                                bestMove = new KeyValuePair<Vector2, KeyValuePair<Vector2, int>>(Pos, new KeyValuePair<Vector2, int>(move, currentMaterialAdvantage));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (bestMove != null)
+            {
+                board.DoBotMove(new List<Vector2>
+                {
+                    bestMove.Value.Key,
+                    bestMove.Value.Value.Key
+                });
+                return true;
+            }
+            return false;
+        }
+
+
+        public static int GetMaterialCount(ChessField[][] board)
         {
             int materialCount = 0;
 
@@ -148,30 +202,18 @@ namespace Schachbot.Bot
 
         private static int GetPieceValue(ChessField field)
         {
-            if(field.Piece != null)
+            if(field.Piece is BasePiece bp)
             {
-                if (field.Piece.GetType() == typeof(Pieces.Rook))
-                    return 50;
-                if (field.Piece.GetType() == typeof(Pieces.Bishop))
-                    return 30;
-                if (field.Piece.GetType() == typeof(Pieces.King))
-                    return 999;
-                if (field.Piece.GetType() == typeof(Pieces.Knight))
-                    return 30;
-                if (field.Piece.GetType() == typeof(Pieces.Pawn))
-                    return 10;
-                if (field.Piece.GetType() == typeof(Pieces.Queen))
-                    return 80;
-                else
-                    return -1;
+                return bp.MaterialValue;
             }
 
             return -1;
         }
 
-        private static ChessBoard CreateBoardCopy(ChessBoard original, ref ChessBoard copy)
+        private static ChessBoard CreateBoardCopy(ChessBoard original)
         {
-            copy = new ChessBoard();
+            
+            ChessBoard copy = new ChessBoard();
             copy.Board = new ChessField[8][];
 
             for (int x = 0; x < 8; x++)
@@ -180,7 +222,21 @@ namespace Schachbot.Bot
                 for (int y = 0; y < 8; y++)
                 {
                     copy.Board[x][y] = new ChessField(original.Board[x][y].IsBlack, x, y);
-                    copy.Board[x][y].PlacePiece(original.Board[x][y].Piece);
+                    BasePiece bp = null;
+                    if (original.Board[x][y].Piece is Pawn pawn)
+                        bp = new Pawn(pawn);
+                    else if (original.Board[x][y].Piece is Rook rook)
+                        bp = new Rook(rook);
+                    else if (original.Board[x][y].Piece is Knight knight)
+                        bp = new Knight(knight);
+                    else if (original.Board[x][y].Piece is Bishop bishop)
+                        bp = new Bishop(bishop);
+                    else if (original.Board[x][y].Piece is Queen queen)
+                        bp = new Queen(queen);
+                    else if (original.Board[x][y].Piece is King king)
+                        bp = new King(king);
+
+                    copy.Board[x][y].PlacePiece(bp);
                 }
             }
 

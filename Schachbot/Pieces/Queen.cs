@@ -10,7 +10,16 @@ public class Queen : BasePiece, IChessPiece
 
     public Queen(bool isBlack = false)
     {
+        MaterialValue = 80;
         IsBlack = isBlack;
+    }
+
+    public Queen(Queen p)
+    {
+        y = p.y;
+        x = p.x;
+        IsBlack = p.IsBlack;
+        MaterialValue = p.MaterialValue;
     }
 
     public override Texture2D GetTexture(SpriteBatch sb)
@@ -42,15 +51,15 @@ public class Queen : BasePiece, IChessPiece
     {
         List<Vector2> toReturn = new List<Vector2>();
         
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, f, f, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, -f, f, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, f, -f, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, -f, -f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, f, f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, -f, f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, f, -f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, -f, -f, toReturn); f++) ;
 
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, -f, false, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, f, false, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, -f, true, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamStraight(chessBoard, f, true, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, -f, false, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, f, false, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, -f, true, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamStraight(chessBoard, f, true, toReturn); f++) ;
 
         return toReturn;
     }

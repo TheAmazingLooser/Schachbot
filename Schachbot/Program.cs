@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Xna.Framework;
+using Schachbot.Pieces;
 
 namespace Schachbot
 {
@@ -7,6 +8,7 @@ namespace Schachbot
     {
         static void Main(string[] args)
         {
+            List<BasePiece> list = new List<BasePiece>();
             using (ChessGame g = new ChessGame())
             {
                 g.Run();

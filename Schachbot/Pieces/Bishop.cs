@@ -11,8 +11,18 @@ public class Bishop : BasePiece, IChessPiece
 
     public Bishop(bool isBlack = false)
     {
+        MaterialValue = 30;
         IsBlack = isBlack;
     }
+    
+    public Bishop(Bishop p)
+    {
+        y = p.y;
+        x = p.x;
+        IsBlack = p.IsBlack;
+        MaterialValue = p.MaterialValue;
+    }
+
     public override Texture2D GetTexture(SpriteBatch sb)
     {
         if (_texture == null)
@@ -42,10 +52,10 @@ public class Bishop : BasePiece, IChessPiece
     {
         List<Vector2> toReturn = new List<Vector2>();
 
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, f, f, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, -f, f, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, f, -f, toReturn); f++) ;
-        for (int f = 1; f < 7 && AddIfNotSameTeamDiagonal(chessBoard, -f, -f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, f, f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, -f, f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, f, -f, toReturn); f++) ;
+        for (int f = 1; f < 8 && AddIfNotSameTeamDiagonal(chessBoard, -f, -f, toReturn); f++) ;
 
         return toReturn;
     }
