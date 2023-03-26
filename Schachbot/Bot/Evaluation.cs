@@ -5,12 +5,15 @@ using Schachbot.Pieces;
 using System.Runtime.CompilerServices;
 using System.Reflection.Metadata.Ecma335;
 using Microsoft.Xna.Framework.Content;
+using System.Collections.Concurrent;
 
 namespace Schachbot.Bot
 {
     public static class Evaluation
     {
-        public static int MaxDepth = 50;
+        private const int CHECKMATE_ADVANTAGE = 500;
+
+        public static int MaxDepth = 5;
         public static KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? BestMove = null;
         public static int HighestScore = 0;
         public static int Depth = 0;
@@ -18,9 +21,11 @@ namespace Schachbot.Bot
 
         public static bool Stop = false;
 
+        private static ConcurrentBag<Thread> runningThreads = new ConcurrentBag<Thread>();
+
         public static void GetBestMove(ChessBoard board, int depth, bool isWhitesTurn, KeyValuePair<Vector2, KeyValuePair<Vector2, int>>? bestMove = null)
         {
-            if (Stop) return;
+            if (Stop || depth >= MaxDepth) return;
             Thread t = new Thread(() =>
             {
                 List<Vector2> currentMove;
@@ -40,6 +45,7 @@ namespace Schachbot.Bot
                     Depth = depth;
                     FieldString = board.ToString();
                 }
+
                 Dictionary<Vector2, List<Vector2>> AntiCheckMoves = board.GetNonCheckingMoves(isWhitesTurn);
 
                 if (AntiCheckMoves.Count == 0) return;
@@ -77,7 +83,7 @@ namespace Schachbot.Bot
                                     }
                                 }
 
-                                if (UpdateBestMove(boardCopy, !isWhitesTurn))
+                                UpdateBestMove(boardCopy, !isWhitesTurn);
                                 {
                                     GetBestMove(boardCopy, depth + 1, isWhitesTurn, bestMove);
 
@@ -91,7 +97,7 @@ namespace Schachbot.Bot
                                         FieldString = board.ToString();
                                     }
                                 }
-                                    
+
                             }
                         }
                     }
@@ -101,6 +107,19 @@ namespace Schachbot.Bot
                     BestMove = bestMove;
             });
             t.Start();
+            runningThreads.Add(t);
+        }
+
+        public static bool IsStillRunning()
+        {
+            try
+            {
+                return Evaluation.runningThreads.Where(t => t.ThreadState == ThreadState.Running).Count() > 0;
+            }
+            catch (Exception ex)
+            {
+                return true;
+            }
         }
 
         public static void Init()
@@ -181,11 +200,11 @@ namespace Schachbot.Bot
 
             foreach (ChessField[] rank in board)
             {
-                foreach(ChessField field in rank)
+                foreach (ChessField field in rank)
                 {
-                    if(field.Piece != null)
+                    if (field.Piece != null)
                     {
-                        if(field.Piece.IsBlack)
+                        if (field.Piece.IsBlack)
                         {
                             materialCount -= GetPieceValue(field);
                         }
@@ -202,7 +221,7 @@ namespace Schachbot.Bot
 
         private static int GetPieceValue(ChessField field)
         {
-            if(field.Piece is BasePiece bp)
+            if (field.Piece is BasePiece bp)
             {
                 return bp.MaterialValue;
             }
@@ -212,7 +231,7 @@ namespace Schachbot.Bot
 
         private static ChessBoard CreateBoardCopy(ChessBoard original)
         {
-            
+
             ChessBoard copy = new ChessBoard();
             copy.Board = new ChessField[8][];
 

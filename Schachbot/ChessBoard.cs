@@ -24,16 +24,6 @@ public class ChessBoard
     
     public ChessBoard()
     {
-        Board = new ChessField[8][];
-        for (int x = 0; x < 8; x++)
-        {
-            Board[x] = new ChessField[8];
-            for (int y = 0; y < 8; y++)
-            {
-                Board[x][y] = new ChessField((x + y) % 2 == 1, x, y);
-            }
-        }
-        
         Random r = new Random();
         _whiteToMove = r.Next(0, 100) > 50;
 
@@ -61,6 +51,16 @@ public class ChessBoard
 
     public void InitializeField()
     {
+
+        Board = new ChessField[8][];
+        for (int x = 0; x < 8; x++)
+        {
+            Board[x] = new ChessField[8];
+            for (int y = 0; y < 8; y++)
+            {
+                Board[x][y] = new ChessField((x + y) % 2 == 1, x, y);
+            }
+        }
 
         for (int x = 0; x < 8; x++)
         {
@@ -91,6 +91,16 @@ public class ChessBoard
 
     public void InitializeField(string FEN)
     {
+        Board = new ChessField[8][];
+        for (int x = 0; x < 8; x++)
+        {
+            Board[x] = new ChessField[8];
+            for (int y = 0; y < 8; y++)
+            {
+                Board[x][y] = new ChessField((x + y) % 2 == 1, x, y);
+            }
+        }
+
         try
         {
             // rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
@@ -252,8 +262,14 @@ public class ChessBoard
             Evaluation.Init();
             Evaluation.GetBestMove(this, 0, true, null);
 
-            int ms = r.Next(20, 3000);
-            Thread.Sleep(ms);
+            int ms = r.Next(20000, 30000);
+
+            int i = 0;
+            while(i < ms && Evaluation.IsStillRunning())
+            {
+                i += 10;
+                Thread.Sleep(10);
+            }
 
 
             if (Evaluation.BestMove == null)
