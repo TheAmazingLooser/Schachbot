@@ -14,7 +14,7 @@ public class Pawn : BasePiece, IChessPiece
 
     public Pawn(bool isBlack = false)
     {
-        MaterialValue = 10;
+        MaterialValue = 100;
         IsBlack = isBlack;
         HasMoved2 = false;
 

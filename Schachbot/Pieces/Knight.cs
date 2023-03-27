@@ -10,7 +10,7 @@ public class Knight : BasePiece, IChessPiece
     
     public Knight(bool isBlack = false)
     {
-        MaterialValue = 30;
+        MaterialValue = 290;
         IsBlack = isBlack;
     }
 

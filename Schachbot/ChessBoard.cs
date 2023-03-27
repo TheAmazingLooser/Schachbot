@@ -25,6 +25,8 @@ public class ChessBoard
     private double _elapsedMsBotMove = 0;
     private int _botMaxMoveDelay = 5000;
 
+    private Evaluation evaluation = new Evaluation();
+
     public ChessBoard()
     {
         Random r = new Random();
@@ -239,7 +241,7 @@ public class ChessBoard
 
     public bool IsChecked(bool white)
     {
-        Vector2 königPosition = white ? _whiteKingPosition : _blackKingPosition;
+        Vector2 königPosition = GetKingPosition(white);
         for (int x = 0; x < 8; x++)
         {
             for (int y = 0; y < 8; y++)
@@ -260,33 +262,56 @@ public class ChessBoard
     {
         if (_whiteToMove)
         {
-            
-            if (_elapsedMsBotMove == 0 && !Evaluation.IsStillRunning())
+            /*
+            if (_elapsedMsBotMove == 0 && !Evaluation_Old.IsStillRunning())
             {
                 _elapsedMsBotMove = gameTime.TotalGameTime.TotalMilliseconds;
-                Evaluation.Init();
-                Evaluation.GetBestMove(this, 0, true, null);
+                Evaluation_Old.Init();
+                Evaluation_Old.GetBestMove(this, 0, true, null);
             } else
             {
                 if (gameTime.TotalGameTime.TotalMilliseconds - _elapsedMsBotMove >= _botMaxMoveDelay || gameTime.IsRunningSlowly)
                 {
-                    Evaluation.Stop = true;
+                    Evaluation_Old.Stop = true;
                 }
 
-                if (!Evaluation.IsStillRunning())
+                if (!Evaluation_Old.IsStillRunning())
                 {
-                    if (Evaluation.BestMove == null)
+                    if (Evaluation_Old.BestMove == null)
                     {
                         Console.WriteLine("Player WON by checkmate!");
                     } else
                     {
-                        Console.WriteLine("Best move: " + Evaluation.BestMove.Value.Key + " -> " + Evaluation.BestMove.Value.Value.Key + " (" + Evaluation.GetMaterialCount(Board) + " -> " + Evaluation.HighestScore + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + Evaluation.Depth + " == " + Evaluation.FieldString);
+                        Console.WriteLine("Best move: " + Evaluation_Old.BestMove.Value.Key + " -> " + Evaluation_Old.BestMove.Value.Value.Key + " (" + Evaluation_Old.GetMaterialCount(Board) + " -> " + Evaluation_Old.HighestScore + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + Evaluation_Old.Depth + " == " + Evaluation_Old.FieldString);
 
                         DoBotMove(new List<Vector2>{
-                        Evaluation.BestMove.Value.Key,
-                        Evaluation.BestMove.Value.Value.Key
+                        Evaluation_Old.BestMove.Value.Key,
+                        Evaluation_Old.BestMove.Value.Value.Key
                         });
                     }
+
+                    _elapsedMsBotMove = 0;
+                    _whiteToMove = false;
+                }
+            }
+            */
+            if (_elapsedMsBotMove == 0 && !evaluation.IsRunning())
+            {
+                _elapsedMsBotMove = gameTime.ElapsedGameTime.TotalMilliseconds;
+                evaluation = new Evaluation();
+                evaluation.Start();
+                evaluation.Evaluate(this, true);
+            } else
+            {
+                _elapsedMsBotMove += gameTime.ElapsedGameTime.TotalMilliseconds;
+                if (_elapsedMsBotMove >= _botMaxMoveDelay && evaluation.BestMoves.Count > 0)
+                {
+                    evaluation.Stop();
+                    var bestMove = evaluation.GetBestMove(true);
+                    Console.WriteLine("Best move: " + bestMove + " (" + GetMaterialCount() + " -> " + bestMove.Score + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + evaluation.Depth);
+
+
+                    DoMove(bestMove);
 
                     _elapsedMsBotMove = 0;
                     _whiteToMove = false;
@@ -320,6 +345,13 @@ public class ChessBoard
 
         Board[xEnd][yEnd].PlacePiece(Board[xStart][yStart].Piece);
         Board[xStart][yStart].PlacePiece(null);
+
+        ConvertPawnsToQueens();
+    }
+    public void DoMove(ChessMove move)
+    {
+        Board[move.ToX][move.ToY].PlacePiece(Board[move.FromX][move.FromY].Piece);
+        Board[move.FromX][move.FromY].PlacePiece(null);
 
         ConvertPawnsToQueens();
     }
@@ -401,52 +433,79 @@ public class ChessBoard
         }
     }
 
-    public Dictionary<Vector2, List<Vector2>> GetNonCheckingMoves(bool isWhite)
+    public Vector2 GetKingPosition(bool isWhite)
     {
-        Dictionary<Vector2, List<Vector2>> AntiCheckMoves = new Dictionary<Vector2, List<Vector2>>();
         Vector2 altePos = new Vector2(_blackKingPosition.X, _blackKingPosition.Y);
         if (isWhite)
             altePos = new Vector2(_whiteKingPosition.X, _whiteKingPosition.Y);
-        for (int xS = 0; xS < 8; xS++)
-        {
-            for (int yS = 0; yS < 8; yS++)
-            {
-                if (Board[xS][yS].Piece is IChessPiece figurS && isWhite == figurS.IsWhite)
-                {
-                    if (figurS is Pawn p)
-                    {
-                        p.SuppressMoveEvent = true;
-                    }
-                    List<Vector2> moves = figurS.GetLegalMoves(this);
-                    // Simulieren von einem Move
-                    foreach (var move in moves)
-                    {
-                        var oldFigur = Board[(int)move.X][(int)move.Y].Piece;
-                        Board[(int)move.X][(int)move.Y].PlacePiece(Board[xS][yS].Piece);
-                        Board[xS][yS].PlacePiece(null);
 
-                        if (!IsChecked(isWhite))
-                        {
-                            if (AntiCheckMoves.ContainsKey(new Vector2(xS, yS)))
-                                AntiCheckMoves[new Vector2(xS, yS)].Add(move);
-                            else
-                                AntiCheckMoves.Add(new Vector2(xS, yS), new List<Vector2>() { move });
-                        }
-                        Board[xS][yS].PlacePiece(figurS);
-                        Board[(int)move.X][(int)move.Y].PlacePiece(oldFigur);
-                        if (isWhite)
-                            _whiteKingPosition = altePos;
-                        else
-                            _blackKingPosition = altePos;
-                    }
-                    if (figurS is Pawn p2)
-                    {
-                        p2.SuppressMoveEvent = false;
-                    }
-                }
+        if (GetField((int)altePos.X, (int)altePos.Y).Piece is King k && k.IsWhite == isWhite)
+        {
+            return altePos;
+        }
+
+        for(int x = 0; x < 8; x++)
+        {
+            for(int y = 0; y < 8; y++)
+            {
+                if (GetField(x, y).Piece is King king && king.IsWhite == isWhite)
+                    return new Vector2(x, y);
             }
         }
 
+        return altePos;
+    }
+
+    public Dictionary<Vector2, List<Vector2>> GetNonCheckingMoves(bool isWhite)
+    {
+        Dictionary<Vector2, List<Vector2>> AntiCheckMoves = new Dictionary<Vector2, List<Vector2>>();
+        try
+        {
+            Vector2 altePos = GetKingPosition(isWhite);
+            for (int xS = 0; xS < 8; xS++)
+            {
+                for (int yS = 0; yS < 8; yS++)
+                {
+                    if (Board[xS][yS].Piece is IChessPiece figurS && isWhite == figurS.IsWhite)
+                    {
+                        if (figurS is Pawn p)
+                        {
+                            p.SuppressMoveEvent = true;
+                        }
+                        List<Vector2> moves = figurS.GetLegalMoves(this);
+                        // Simulieren von einem Move
+                        foreach (var move in moves)
+                        {
+                            var oldFigur = Board[(int)move.X][(int)move.Y].Piece;
+                            Board[(int)move.X][(int)move.Y].PlacePiece(Board[xS][yS].Piece);
+                            Board[xS][yS].PlacePiece(null);
+
+                            if (!IsChecked(isWhite))
+                            {
+                                if (AntiCheckMoves.ContainsKey(new Vector2(xS, yS)))
+                                    AntiCheckMoves[new Vector2(xS, yS)].Add(move);
+                                else
+                                    AntiCheckMoves.Add(new Vector2(xS, yS), new List<Vector2>() { move });
+                            }
+                            Board[xS][yS].PlacePiece(figurS);
+                            Board[(int)move.X][(int)move.Y].PlacePiece(oldFigur);
+                            if (isWhite)
+                                _whiteKingPosition = altePos;
+                            else
+                                _blackKingPosition = altePos;
+                        }
+                        if (figurS is Pawn p2)
+                        {
+                            p2.SuppressMoveEvent = false;
+                        }
+                    }
+                }
+            }
+
+        } finally
+        {
+            // Ignore
+        }
         return AntiCheckMoves;
     }
     
@@ -462,11 +521,11 @@ public class ChessBoard
                 Vector2 pos = new Vector2(x, y);
 
                 bool imSchach = false;
-                if (pos == _whiteKingPosition)
+                if (pos == GetKingPosition(true))
                 {
                     imSchach = IsChecked(true);
                 }
-                if (pos == _blackKingPosition)
+                if (pos == GetKingPosition(false))
                 {
                     imSchach = IsChecked(false);
                 }
@@ -511,5 +570,97 @@ public class ChessBoard
             s += " / ";
         }
         return s;
+    }
+
+    public ChessBoard Copy()
+    {
+
+        ChessBoard copy = new ChessBoard();
+        copy.Board = new ChessField[8][];
+
+        for (int x = 0; x < 8; x++)
+        {
+            copy.Board[x] = new ChessField[8];
+            for (int y = 0; y < 8; y++)
+            {
+                copy.Board[x][y] = new ChessField(Board[x][y].IsBlack, x, y);
+                BasePiece bp = null;
+                if (Board[x][y].Piece is Pawn pawn)
+                    bp = new Pawn(pawn);
+                else if (Board[x][y].Piece is Rook rook)
+                    bp = new Rook(rook);
+                else if (Board[x][y].Piece is Knight knight)
+                    bp = new Knight(knight);
+                else if (Board[x][y].Piece is Bishop bishop)
+                    bp = new Bishop(bishop);
+                else if (Board[x][y].Piece is Queen queen)
+                    bp = new Queen(queen);
+                else if (Board[x][y].Piece is King king)
+                {
+                    bp = new King(king);
+                    if (bp.IsBlack)
+                        bp.Moved += (fX, fY, tX, tY) => KingMoved(false, new Vector2(tX, tY));
+                    else
+                        bp.Moved += (fX, fY, tX, tY) => KingMoved(true, new Vector2(tX, tY));
+                }
+
+                copy.Board[x][y].PlacePiece(bp);
+            }
+        }
+
+        return copy;
+    }
+
+    public double GetMaterialCount(bool IncludeSquareTable = true)
+    {
+        double materialCount = 0;
+        double div = 5.0;
+
+        foreach (ChessField[] rank in Board)
+        {
+            foreach (ChessField field in rank)
+            {
+                if (field.Piece is BasePiece bp)
+                {
+                    double val = bp.MaterialValue;
+
+                    if (field.Piece.IsBlack)
+                    {
+                        materialCount -= val;
+                        if (IncludeSquareTable)
+                        {
+                            if (field.Piece.GetType() == typeof(Pieces.Rook))
+                                materialCount += PieceSquareTables.pst_rook_black[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.Bishop))
+                                materialCount += PieceSquareTables.pst_bishop_black[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.King))
+                                materialCount += PieceSquareTables.pst_king_black[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.Knight))
+                                materialCount += PieceSquareTables.pst_knight_black[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.Pawn))
+                                materialCount += PieceSquareTables.pst_pawn_black[(field.y * 8) + field.x] / div;
+                        }
+                    }
+                    else
+                    {
+                        materialCount += val;
+                        if (IncludeSquareTable)
+                        {
+                            if (field.Piece.GetType() == typeof(Pieces.Rook))
+                                materialCount += PieceSquareTables.pst_rook_white[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.Bishop))
+                                materialCount += PieceSquareTables.pst_bishop_white[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.King))
+                                materialCount += PieceSquareTables.pst_king_white[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.Knight))
+                                materialCount += PieceSquareTables.pst_knight_white[(field.y * 8) + field.x] / div;
+                            if (field.Piece.GetType() == typeof(Pieces.Pawn))
+                                materialCount += PieceSquareTables.pst_pawn_white[(field.y * 8) + field.x] / div;
+                        }
+                    }
+                }
+            }
+        }
+        return materialCount;
     }
 }

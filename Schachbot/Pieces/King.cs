@@ -11,7 +11,7 @@ public class King : BasePiece, IChessPiece
 
     public King(bool isBlack = false)
     {
-        MaterialValue = 999;
+        MaterialValue = 9999;
         IsBlack = isBlack;
     }
 

@@ -10,7 +10,7 @@ public class Queen : BasePiece, IChessPiece
 
     public Queen(bool isBlack = false)
     {
-        MaterialValue = 80;
+        MaterialValue = 800;
         IsBlack = isBlack;
     }
 

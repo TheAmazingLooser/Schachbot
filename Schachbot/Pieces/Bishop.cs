@@ -11,7 +11,7 @@ public class Bishop : BasePiece, IChessPiece
 
     public Bishop(bool isBlack = false)
     {
-        MaterialValue = 30;
+        MaterialValue = 300;
         IsBlack = isBlack;
     }
     

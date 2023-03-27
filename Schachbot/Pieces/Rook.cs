@@ -10,7 +10,7 @@ public class Rook : BasePiece, IChessPiece
 
     public Rook(bool isBlack = false)
     {
-        MaterialValue = 50;
+        MaterialValue = 500;
         IsBlack = isBlack;
     }
 
