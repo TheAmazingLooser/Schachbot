@@ -38,7 +38,7 @@ namespace Schachbot
 
         public override string ToString()
         {
-            return $"({FromX}|{FromY}) -> ({ToX}|{ToY})";
+            return $"({"" + (char)(FromX + 'a')}|{8 - FromY}) -> ({(char)(ToX + 'a')}|{8 - ToY})";
         }
     }
 }

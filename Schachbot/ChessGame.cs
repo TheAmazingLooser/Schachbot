@@ -34,6 +34,8 @@ public class ChessGame : Game
 
     private GraphicsDeviceManager _gdm;
 
+    public static bool IsBotVsBot => true;
+
     public ChessGame()
     {
         _gdm = new GraphicsDeviceManager(this);

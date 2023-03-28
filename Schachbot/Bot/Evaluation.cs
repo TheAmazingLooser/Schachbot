@@ -8,12 +8,15 @@ using Microsoft.Xna.Framework.Content;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.ComponentModel;
+using System.Data;
+using System.Linq;
 
 namespace Schachbot.Bot
 {
     public class Evaluation
     {
-        public ConcurrentBag<ChessMove> BestMoves { get; protected set; } = new ConcurrentBag<ChessMove>();
+        private const bool UseSquareTable = true;
+        public ConcurrentBag<KeyValuePair<ChessMove, List<ChessMove>>> BestMoves { get; protected set; } = new ConcurrentBag<KeyValuePair<ChessMove, List<ChessMove>>>();
         public int Depth { get; protected set; }
         public int MaxDepth = -1;
 
@@ -45,7 +48,7 @@ namespace Schachbot.Bot
                             EvaluationThreadParameter Param = null;
                             if (Actions.Count > 0 && Actions.TryDequeue(out Param))
                             {
-                                InternalEvaluate(Param.Board, Param.Depth, Param.IsWhite, Param.BestMove);
+                                InternalEvaluate(Param.Board, Param.Depth, Param.IsWhite, Param.BestMove, Param.MoveList);
                             }
                         }
                     });
@@ -67,9 +70,25 @@ namespace Schachbot.Bot
             return !stop;
         }
 
-        public ChessMove GetBestMove(bool forWhite)
+        public ChessMove GetBestMove(bool forWhite, out double Score)
         {
-            return BestMoves.First();
+            Score = 0;
+            ChessMove ret = null;
+            List<ChessMove> movesToHere = null;
+            if (BestMoves.Count > 0)
+            {
+                Score = 0;
+                foreach(var kv in BestMoves)
+                {
+                    if (ret == null || (kv.Value.Last().Score > Score && forWhite) || (kv.Value.Last().Score < Score && !forWhite))
+                    {
+                        ret = kv.Key;
+                        Score = kv.Value.Last().Score;
+                        movesToHere = kv.Value;
+                    }
+                }
+            }
+            return ret;
         }
 
 
@@ -80,203 +99,104 @@ namespace Schachbot.Bot
                 Board = board.Copy(),
                 Depth = 0,
                 IsWhite = isWhite,
-                BestMove = new ConcurrentBag<ChessMove>()
+                BestMove = null
             });
         }
 
-        private void InternalEvaluate(ChessBoard board, int depth, bool isWhite, ConcurrentBag<ChessMove> bestMove)
+        private void InternalEvaluate(ChessBoard board, int depth, bool isWhite, ChessMove bestMove, List<ChessMove> moveList)
         {
             if (depth > MaxDepth)
             {
                 MaxDepth = depth;
-            }
-
-            if (bestMove.Count > 0 && (BestMoves.Count == 0 || (bestMove.Last().Score > BestMoves.Last().Score && isWhite) || (bestMove.Last().Score < BestMoves.Last().Score && !isWhite)))
-            {
-                BestMoves.Add(bestMove.Last());
                 Depth = depth;
             }
-
-            /*
-            double HighestFutureScore = board.GetMaterialCount();
-            List<ChessMove> bestFutureMoves = new List<ChessMove>();
-            ChessMove bestFutureMove = null;
-
-            var nonCheckMoves = board.GetNonCheckingMoves(isWhite);
-            foreach (var move in nonCheckMoves)
-            {
-                int count = 0;
-                int score = 0;
-                foreach (var toMove in move.Value)
-                {
-                    var CopyBoard = board.Copy();
-                    var tempMove = new ChessMove((int)move.Key.X, (int)move.Key.Y, (int)toMove.X, (int)toMove.Y, HighestFutureScore);
-                    CopyBoard.DoMove(tempMove);
-                    count++;
-                    score += CopyBoard.GetMaterialCount();
-                    int enemyScore = score / count;
-                    foreach (var enemyMove in CopyBoard.GetNonCheckingMoves(!isWhite))
-                    {
-                        int tEnemyScore = 0;
-                        int tEnemyCount = 0;
-                        var CopyBoardEnemy = CopyBoard.Copy();
-                        foreach (var toMoveEnemy in enemyMove.Value)
-                        {
-                            tEnemyCount++;
-                            CopyBoardEnemy.DoMove(new ChessMove((int)enemyMove.Key.X, (int)enemyMove.Key.Y, (int)toMove.X, (int)toMove.Y, CopyBoardEnemy.GetMaterialCount()));
-                            tEnemyScore += CopyBoardEnemy.GetMaterialCount();
-                        }
-
-                        if ((tEnemyScore / tEnemyCount > enemyScore && isWhite) || (tEnemyScore / tEnemyCount < enemyScore && !isWhite))
-                        {
-                            count += tEnemyCount;
-                            score += tEnemyScore;
-                        }
-                    }
-
-                    if (count > 0)
-                    {
-                        double nextScore = score / (double)count;
-                        if (((nextScore >= HighestFutureScore && isWhite) || (nextScore <= HighestFutureScore && !isWhite)) || bestFutureMoves.Count == 0)
-                        {
-                            HighestFutureScore = nextScore;
-                            bestFutureMoves.Add(tempMove);
-                            try
-                            {
-                                bestFutureMoves.Remove(bestFutureMove);
-                            } catch
-                            {
-                                
-                            }
-                        }
-
-                        if (bestFutureMove == null || (bestFutureMove.Score <= tempMove.Score && isWhite) || (bestFutureMove.Score >= tempMove.Score && !isWhite))
-                        {
-                            bestFutureMove = tempMove;
-                        }
-                    } else if (count == 0)
-                    {
-                        return;
-                    }
-                }
-            }
-
-            if (bestFutureMoves.Count > 0)
-            {
-                foreach (var move in bestFutureMoves)
-                {
-                    ChessMove futureBestMove = bestMove == null ? new(move) : new(bestMove);
-                    if (BestMoveTree.ContainsKey(depth))
-                    {
-                        ConcurrentBag<KeyValuePair<ChessMove, ChessMove>> outMoves = null;
-                        if (BestMoveTree.TryGetValue(depth, out outMoves))
-                        {
-                            outMoves.Add(new KeyValuePair<ChessMove, ChessMove>(futureBestMove, move));
-                        }
-                    }
-                    else
-                    {
-                        BestMoveTree.TryAdd(depth, new ConcurrentBag<KeyValuePair<ChessMove, ChessMove>>()
-                        {
-                            new KeyValuePair<ChessMove, ChessMove>(futureBestMove, move)
-                        });
-                    }
-                    var copyBoard = board.Copy();
-                    copyBoard.DoMove(move);
-                    Actions.Enqueue(new EvaluationThreadParameter()
-                    {
-                        Board = copyBoard,
-                        BestMove = futureBestMove,
-                        Depth = depth + 1,
-                        IsWhite = !isWhite
-                    });
-                }
-            } else
-            {
-                if (BestMoveTree.ContainsKey(depth))
-                {
-                    ConcurrentBag<KeyValuePair<ChessMove, ChessMove>> outMoves = null;
-                    if (BestMoveTree.TryGetValue(depth, out outMoves))
-                    {
-                        outMoves.Add(new KeyValuePair<ChessMove, ChessMove>(bestMove, bestFutureMove));
-                    }
-                }
-                else
-                {
-                    BestMoveTree.TryAdd(depth, new ConcurrentBag<KeyValuePair<ChessMove, ChessMove>>()
-                    {
-                        new KeyValuePair<ChessMove, ChessMove>(bestMove, bestFutureMove)
-                    });
-                }
-                var copyBoard = board.Copy();
-                if (bestFutureMove != null)
-                {
-                    copyBoard.DoMove(bestFutureMove);
-                    Actions.Enqueue(new EvaluationThreadParameter()
-                    {
-                        Board = copyBoard,
-                        BestMove = bestMove == null ? new(bestFutureMove) : new(bestMove),
-                        Depth = depth + 1,
-                        IsWhite = !isWhite
-                    });
-                }
-            }
-            */
-
+            
             // Get all Moves for us
             var ourMoves = GetAllMoves(board, isWhite);
+            if (ourMoves.Count == 0) return;
 
             // Rank all of the moves desc by the average score of the moves
-            var rankedMoveSets = ourMoves.OrderByDescending(x => x.Value.Average(y => y.Score)).ToList();
+            var rankedMoveSets = ourMoves.OrderByDescending(x => x.Value.Max(y => y.Score)).ToList();
+            
+            if (!isWhite)
+                rankedMoveSets = ourMoves.OrderBy(x => x.Value.Min(y => y.Score)).ToList();
 
-            var currentScore = board.GetMaterialCount();
+            var currentScore = board.GetMaterialCount(UseSquareTable);
 
             List<ChessMove> futureMove = new List<ChessMove>();
 
-            // Take 3 of the best move sets
-            for (int i = 0; i < rankedMoveSets.Count; i++)
+            var usedMoveSets = rankedMoveSets.First().Value;
+            if (isWhite)
+                usedMoveSets = usedMoveSets.OrderByDescending(x => x.Score).ToList();
+            else
+                usedMoveSets = usedMoveSets.OrderBy(x => x.Score).ToList();
+
+            for (int i = 0; i < usedMoveSets.Count; i++)
             {
-                var Score = rankedMoveSets[i].Value.Average(x => x.Score);
-                var moveSet = rankedMoveSets[i];
-                double averageEnemyScore = Score;
+                var Score = usedMoveSets[i].Score;
+                if (!(isWhite && Score >= currentScore) && !(!isWhite && Score <= currentScore))
+                    continue;
                 ChessMove bestFutMove = null;
-                foreach (var pos in moveSet.Value)
+                foreach (var pos in usedMoveSets)
                 {
                     var copyBoard = board.Copy();
                     copyBoard.DoMove(pos);
                     var enemyMoves = GetAllMoves(copyBoard, !isWhite);
 
-                    double avgScore = Score;
                     if (enemyMoves.Count > 0)
-                        avgScore = enemyMoves.Max(x => x.Value.Average(y => y.Score));
-
-                    // Get the average enemy score
-                    if (bestMove.Count == 0 || enemyMoves.Count == 0 || (averageEnemyScore > avgScore && isWhite) || (averageEnemyScore < avgScore && !isWhite))
                     {
-                        averageEnemyScore = avgScore;
+                        double enemyScore = Score;
+
+                        if (!isWhite) enemyScore = enemyMoves.OrderByDescending(x => x.Value.Average(y => y.Score)).First().Value.Min(y => y.Score);
+                        else enemyScore = enemyMoves.OrderBy(x => x.Value.Average(y => y.Score)).First().Value.Max(y => y.Score);
+
+                        if ((enemyScore <= Score && isWhite) || (enemyScore >= Score && !isWhite))
+                        {
+                            Score = enemyScore;
+                            bestFutMove = pos;
+                            futureMove.Add(pos);
+                        }
+                    } else
+                    {
+                        Score = isWhite ? -100000 : 100000;
                         bestFutMove = pos;
                     }
                 }
 
+                /*
                 if (bestFutMove != null)
                 {
                     futureMove.Add(bestFutMove);
                 }
+                */
             }
 
             // Add the best move to the Queue
-            foreach (var move in futureMove)
+            List<ChessMove> orderedMoves = futureMove.OrderByDescending(x => x.Score).ToList();
+            if(!isWhite)
+                orderedMoves = futureMove.OrderBy(x => x.Score).ToList();
+
+            for (int i = 0; i < orderedMoves.Count; i++)
             {
-                var copyBoard = board.Copy();
-                copyBoard.DoMove(move);
-                bestMove.Add(move);
-                Actions.Enqueue(new EvaluationThreadParameter()
+                var move = orderedMoves[i];
+                if (i == 0 || (move.Score > currentScore && isWhite) || (move.Score < currentScore && !isWhite))
                 {
-                    Board = copyBoard,
-                    BestMove = bestMove,
-                    Depth = depth + 1,
-                    IsWhite = !isWhite
-                });
+                    var copyBoard = board.Copy();
+                    copyBoard.DoMove(move);
+                    if (bestMove == null)
+                        bestMove = new(move);
+                    var newList = new List<ChessMove>(moveList);
+                    newList.Add(move);
+                    BestMoves.Add(new KeyValuePair<ChessMove, List<ChessMove>>(bestMove, newList));
+                    Actions.Enqueue(new EvaluationThreadParameter()
+                    {
+                        Board = copyBoard,
+                        BestMove = bestMove,
+                        Depth = depth + 1,
+                        IsWhite = !isWhite,
+                        MoveList = newList
+                    });
+                }
             }
         }
 
@@ -290,7 +210,7 @@ namespace Schachbot.Bot
                 {
                     var copyBoard = board.Copy();
                     copyBoard.DoMove(new ChessMove((int)tMoveVec.Key.X, (int)tMoveVec.Key.Y, (int)tMoveVecTo.X, (int)tMoveVecTo.Y, 0));
-                    ChessMove move = new ChessMove((int)tMoveVec.Key.X, (int)tMoveVec.Key.Y, (int)tMoveVecTo.X, (int)tMoveVecTo.Y, copyBoard.GetMaterialCount(false));
+                    ChessMove move = new ChessMove((int)tMoveVec.Key.X, (int)tMoveVec.Key.Y, (int)tMoveVecTo.X, (int)tMoveVecTo.Y, copyBoard.GetMaterialCount(UseSquareTable));
                 
                     if (!ret.ContainsKey(tMoveVec.Key))
                     {
@@ -315,7 +235,8 @@ namespace Schachbot.Bot
         public ChessBoard Board;
         public int Depth;
         public bool IsWhite;
-        public ConcurrentBag<ChessMove> BestMove;
+        public ChessMove BestMove;
+        public List<ChessMove> MoveList = new List<ChessMove>();
     }
 
 

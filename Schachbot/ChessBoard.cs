@@ -23,7 +23,7 @@ public class ChessBoard
     private int _arrowCount = 0;
 
     private double _elapsedMsBotMove = 0;
-    private int _botMaxMoveDelay = 5000;
+    private int _botMaxMoveDelay = 2000;
 
     private Evaluation evaluation = new Evaluation();
 
@@ -307,14 +307,41 @@ public class ChessBoard
                 if (_elapsedMsBotMove >= _botMaxMoveDelay && evaluation.BestMoves.Count > 0)
                 {
                     evaluation.Stop();
-                    var bestMove = evaluation.GetBestMove(true);
-                    Console.WriteLine("Best move: " + bestMove + " (" + GetMaterialCount() + " -> " + bestMove.Score + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + evaluation.Depth);
+                    double Score = 0;
+                    var bestMove = evaluation.GetBestMove(true, out Score);
+                    Console.WriteLine("[WHT] Best move: " + bestMove + " (" + GetMaterialCount(false) + " -> " + Score + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + evaluation.Depth);
 
 
                     DoMove(bestMove);
 
                     _elapsedMsBotMove = 0;
                     _whiteToMove = false;
+                }
+            }
+        } else if (ChessGame.IsBotVsBot)
+        {
+            if (_elapsedMsBotMove == 0 && !evaluation.IsRunning())
+            {
+                _elapsedMsBotMove = gameTime.ElapsedGameTime.TotalMilliseconds;
+                evaluation = new Evaluation();
+                evaluation.Start();
+                evaluation.Evaluate(this, false);
+            }
+            else
+            {
+                _elapsedMsBotMove += gameTime.ElapsedGameTime.TotalMilliseconds;
+                if (_elapsedMsBotMove >= _botMaxMoveDelay && evaluation.BestMoves.Count > 0)
+                {
+                    evaluation.Stop();
+                    double Score = 0;
+                    var bestMove = evaluation.GetBestMove(false, out Score);
+                    Console.WriteLine("[BLK] Best move: " + bestMove + " (" + GetMaterialCount() + " -> " + Score + "). Thought for " + _elapsedMsBotMove + " ms. Depth -> " + evaluation.Depth);
+
+
+                    DoMove(bestMove);
+
+                    _elapsedMsBotMove = 0;
+                    _whiteToMove = true;
                 }
             }
         }
@@ -614,7 +641,7 @@ public class ChessBoard
     public double GetMaterialCount(bool IncludeSquareTable = true)
     {
         double materialCount = 0;
-        double div = 5.0;
+        double div = 1.0;
 
         foreach (ChessField[] rank in Board)
         {
@@ -630,15 +657,15 @@ public class ChessBoard
                         if (IncludeSquareTable)
                         {
                             if (field.Piece.GetType() == typeof(Pieces.Rook))
-                                materialCount += PieceSquareTables.pst_rook_black[(field.y * 8) + field.x] / div;
+                                materialCount -= PieceSquareTables.pst_rook_black[(field.y * 8) + field.x] * -1 / div;
                             if (field.Piece.GetType() == typeof(Pieces.Bishop))
-                                materialCount += PieceSquareTables.pst_bishop_black[(field.y * 8) + field.x] / div;
+                                materialCount -= PieceSquareTables.pst_bishop_black[(field.y * 8) + field.x] * -1 / div;
                             if (field.Piece.GetType() == typeof(Pieces.King))
-                                materialCount += PieceSquareTables.pst_king_black[(field.y * 8) + field.x] / div;
+                                materialCount -= PieceSquareTables.pst_king_black[(field.y * 8) + field.x] * -1 / div;
                             if (field.Piece.GetType() == typeof(Pieces.Knight))
-                                materialCount += PieceSquareTables.pst_knight_black[(field.y * 8) + field.x] / div;
+                                materialCount -= PieceSquareTables.pst_knight_black[(field.y * 8) + field.x] * -1 / div;
                             if (field.Piece.GetType() == typeof(Pieces.Pawn))
-                                materialCount += PieceSquareTables.pst_pawn_black[(field.y * 8) + field.x] / div;
+                                materialCount -= PieceSquareTables.pst_pawn_black[(field.y * 8) + field.x] * -1 / div;
                         }
                     }
                     else
