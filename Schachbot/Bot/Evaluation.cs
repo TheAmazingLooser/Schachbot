@@ -1,20 +1,16 @@
-﻿using System;
-using Schachbot;
-using Microsoft.Xna.Framework;
-using Schachbot.Pieces;
-using System.Runtime.CompilerServices;
-using System.Reflection.Metadata.Ecma335;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.ComponentModel;
 using System.Data;
-using System.Linq;
+using System.Reflection.Emit;
+using System.Runtime.CompilerServices;
 
 namespace Schachbot.Bot
 {
     public class Evaluation
     {
+        private bool CheckMateAsWhite = false;
+        private ChessMove CheckMateMove = null;
         private const bool UseSquareTable = true;
         public ConcurrentBag<KeyValuePair<ChessMove, List<ChessMove>>> BestMoves { get; protected set; } = new ConcurrentBag<KeyValuePair<ChessMove, List<ChessMove>>>();
         public int Depth { get; protected set; }
@@ -74,20 +70,154 @@ namespace Schachbot.Bot
         {
             Score = 0;
             ChessMove ret = null;
+
+            if (CheckMateMove != null && CheckMateAsWhite == forWhite && BestMoves.Count(x => 
+                x.Key.ToX == CheckMateMove.ToX &&
+                x.Key.FromX == CheckMateMove.FromX &&
+                x.Key.ToY == CheckMateMove.ToY &&
+                x.Key.ToX == CheckMateMove.ToX
+            ) == 1)
+            {
+                if (forWhite)
+                    Score = double.MaxValue;
+                else
+                    Score = double.MinValue;
+                return CheckMateMove;
+            }
+
             List<ChessMove> movesToHere = null;
             if (BestMoves.Count > 0)
             {
-                Score = 0;
-                foreach(var kv in BestMoves)
+                // Convert the BestMoves to a Dictionary
+                Dictionary<ChessMove, List<List<ChessMove>>> ConvertedMoves = new Dictionary<ChessMove, List<List<ChessMove>>>();
+                foreach (var kv in BestMoves)
                 {
-                    if (ret == null || (kv.Value.Last().Score > Score && forWhite) || (kv.Value.Last().Score < Score && !forWhite))
-                    {
-                        ret = kv.Key;
-                        Score = kv.Value.Last().Score;
-                        movesToHere = kv.Value;
-                    }
+                    if (!ConvertedMoves.ContainsKey(kv.Key))
+                        ConvertedMoves.Add(kv.Key, new List<List<ChessMove>>());
+                    ConvertedMoves[kv.Key].Add(kv.Value);
                 }
+
+                // Get the best move
+                List<ChessMove> PossibleMoves = new List<ChessMove>();
+                foreach(var kv in ConvertedMoves)
+                {
+                    // Calculate the Average of every move in the list of submoves
+                    Score = kv.Key.Score;
+
+                    // TODO: Elias: Hier die List<List<...>> in einen auswertbaren baum umbauen...
+                    // GetBestMove -> GetWorstMove -> GetBestMove -> GetWorstMove
+                    List<List<ChessMove>> GetBestMove(List<List<ChessMove>> currentMoveSet, bool forWhite)
+                    {
+                        // Create a dictionary containing the first element of the 2nd list as keys and as a value a list of lists containing every other element of the 2nd list
+                        Dictionary<ChessMove, List<List<ChessMove>>> ConvertedSubMoves = new Dictionary<ChessMove, List<List<ChessMove>>>();
+                        foreach (var subMove in currentMoveSet)
+                        {
+                            if (subMove.Count == 0) continue;
+                            
+                            if (!ConvertedSubMoves.ContainsKey(subMove[0]))
+                                ConvertedSubMoves.Add(subMove[0], new List<List<ChessMove>>());
+                            ConvertedSubMoves[subMove[0]].Add(subMove.Skip(1).ToList());
+                        }
+
+                        // Get the best moves for white (max Score in key) or black (min Score in key)
+                        List<ChessMove> BestMoves = new List<ChessMove>();
+                        if (forWhite)
+                            BestMoves = ConvertedSubMoves.OrderByDescending(x => x.Key.Score).Select(x => x.Key).ToList();
+                        else
+                            BestMoves = ConvertedSubMoves.OrderBy(x => x.Key.Score).Select(x => x.Key).ToList();
+
+                        // Clear all moves from BestMoves where the score is not equal to the first one.
+                        if (BestMoves.Count > 0)
+                        {
+                            double BestScore = BestMoves[0].Score;
+                            BestMoves.RemoveAll(x => x.Score != BestScore);
+                        }
+
+
+                        // Remove every empty list from ConvertedSubMoves[BestMoves.First()]
+                        if (BestMoves.Count > 0)
+                            ConvertedSubMoves[BestMoves.First()].RemoveAll(x => x.Count == 0);
+
+                        if (BestMoves.Count > 0)                        
+                            return ConvertedSubMoves[BestMoves.First()];
+                        return new List<List<ChessMove>>();
+
+                    }
+
+                    var BestMove = kv.Value;
+                    bool forWhitWhile = forWhite;
+
+                    do {
+                        var newBestMoveFutGood = GetBestMove(BestMove, forWhitWhile);
+                        if (newBestMoveFutGood.Count > 0)
+                        {
+                            // Get the best Scoring move
+                            if (forWhitWhile)
+                                BestMove = newBestMoveFutGood.OrderByDescending(x => x.Average(y => y.Score)).ToList();
+                            else
+                                BestMove = newBestMoveFutGood.OrderBy(x => x.Average(y => y.Score)).ToList();
+                        } else
+                        {
+                            break;
+                        }
+                        forWhitWhile = !forWhitWhile;
+                    } while (BestMove.Count > 0);
+
+                    kv.Key.Score = BestMove.First().First().Score;
+                    PossibleMoves.Add(kv.Key);
+                    // Get the best Scoring move
+
+                    /*
+                    int maxSubMoves = kv.Value.Max(x => x.Count);
+
+                    for(int f = 0; f < maxSubMoves; f++)
+                    {
+                        bool isWhiteMove = forWhite && (f == 0 || f % 2 == 0);
+                        bool isBlackMove = !forWhite && (f == 0 || f % 2 == 0);
+                        Score = kv.Key.Score;
+
+                        // Convert the values to a dictionary where the key is the first element of the list in the list and the value a list of a list of objects contains every other object left in that list.
+                        Dictionary<ChessMove, List<List<ChessMove>>> ConvertedSubMoves = new Dictionary<ChessMove, List<List<ChessMove>>>();
+
+                        foreach (var subMove in kv.Value)
+                        {
+                            if (subMove.Count <= f) break;
+                            if (!ConvertedSubMoves.ContainsKey(subMove[f]))
+                                ConvertedSubMoves.Add(subMove[f], new List<List<ChessMove>>());
+                            ConvertedSubMoves[subMove[f]].Add(subMove.Skip(f + 1).ToList());
+                        }
+
+                        // Figure out the worst move according to isWhite or isBlacks move
+                        List<ChessMove> IgnoreI = new List<ChessMove>();
+
+                        foreach (var subMove in ConvertedSubMoves)
+                        {
+                            if (IgnoreI.Contains(subMove.Key)) continue;
+                            if (subMove.Value.Count <= f) break;
+                            if ((isWhiteMove && subMove.Key.Score > Score) || (isBlackMove && subMove.Key.Score < Score))
+                            {
+                                Score = subMove.Key.Score;
+                            }
+                            else
+                            {
+                                IgnoreI.Add(subMove.Key);
+                            }
+                        }
+                    }
+
+                    kv.Key.Score = Score;
+                    PossibleMoves.Add(kv.Key);
+                    */
+                }
+
+                var orderedMoves = PossibleMoves.OrderByDescending(x => x.Score);
+                if (!forWhite)
+                    orderedMoves = PossibleMoves.OrderBy(x => x.Score);
+
+                ret = orderedMoves.First();
+                Score = ret.Score;
             }
+            
             return ret;
         }
 
@@ -105,6 +235,8 @@ namespace Schachbot.Bot
 
         private void InternalEvaluate(ChessBoard board, int depth, bool isWhite, ChessMove bestMove, List<ChessMove> moveList)
         {
+            if (CheckMateMove != null) return;
+            
             if (depth > MaxDepth)
             {
                 MaxDepth = depth;
@@ -113,7 +245,12 @@ namespace Schachbot.Bot
             
             // Get all Moves for us
             var ourMoves = GetAllMoves(board, isWhite);
-            if (ourMoves.Count == 0) return;
+            if (ourMoves.Count == 0)
+            {
+                if (moveList.Count > 0)
+                    moveList.Last().Score = isWhite ? double.MinValue : double.MaxValue;
+                return;
+            }
 
             // Rank all of the moves desc by the average score of the moves
             var rankedMoveSets = ourMoves.OrderByDescending(x => x.Value.Max(y => y.Score)).ToList();
@@ -125,6 +262,48 @@ namespace Schachbot.Bot
 
             List<ChessMove> futureMove = new List<ChessMove>();
 
+            // Get the best move for us
+            
+            for(int i = 0; i < rankedMoveSets.Count; i++)
+            {
+                var moveFrom = rankedMoveSets[i].Key;
+                // Predict the enemy moves
+                for (int f = 0; f < rankedMoveSets[i].Value.Count; f++)
+                {
+                    var Score = rankedMoveSets[i].Value[f].Score;
+
+                    // if the Score is not better than the current Score, skip it. Always keep 1 move (i > 0)
+                    //if (i > 0 && !(isWhite && Score > currentScore) && !(!isWhite && Score < currentScore))
+                    //    continue;
+
+                    var move = rankedMoveSets[i].Value[f];
+                    
+                    var copyBoard = board.Copy();
+                    copyBoard.DoMove(move);
+
+                    ChessMove bestFutureMove = new(move);
+
+                    var newList = new List<ChessMove>(moveList);
+                    newList.Add(move);
+                    BestMoves.Add(new KeyValuePair<ChessMove, List<ChessMove>>(bestMove == null ? bestFutureMove : bestMove, newList));
+                    Actions.Enqueue(new EvaluationThreadParameter()
+                    {
+                        Board = copyBoard,
+                        BestMove = bestMove == null ? bestFutureMove : bestMove,
+                        Depth = depth + 1,
+                        IsWhite = !isWhite,
+                        MoveList = newList
+                    });
+                }
+            }
+
+
+
+
+
+
+
+            /*
             var usedMoveSets = rankedMoveSets.First().Value;
             if (isWhite)
                 usedMoveSets = usedMoveSets.OrderByDescending(x => x.Score).ToList();
@@ -162,13 +341,6 @@ namespace Schachbot.Bot
                         bestFutMove = pos;
                     }
                 }
-
-                /*
-                if (bestFutMove != null)
-                {
-                    futureMove.Add(bestFutMove);
-                }
-                */
             }
 
             // Add the best move to the Queue
@@ -198,6 +370,7 @@ namespace Schachbot.Bot
                     });
                 }
             }
+            */
         }
 
         private Dictionary<Vector2, List<ChessMove>> GetAllMoves(ChessBoard board, bool white)

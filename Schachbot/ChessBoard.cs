@@ -23,7 +23,7 @@ public class ChessBoard
     private int _arrowCount = 0;
 
     private double _elapsedMsBotMove = 0;
-    private int _botMaxMoveDelay = 2000;
+    private int _botMaxMoveDelay = 3500;
 
     private Evaluation evaluation = new Evaluation();
 
@@ -367,8 +367,6 @@ public class ChessBoard
         int yStart = (int)move[0].Y;
         int xEnd = (int)move[1].X;
         int yEnd = (int)move[1].Y;
-
-
 
         Board[xEnd][yEnd].PlacePiece(Board[xStart][yStart].Piece);
         Board[xStart][yStart].PlacePiece(null);

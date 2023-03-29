@@ -8,6 +8,11 @@ namespace Schachbot.Bot
 {
     public static class PieceSquareTables
     {
+        static int doubledPawnsPenalty = 50;
+        static int tripledAndMorePenalty = 150;
+        static int pawnIslandPenalty = 25;
+        static int defendedBonus = 25;
+
         public static readonly int[] pst_pawn_white = {
           0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0,
@@ -141,6 +146,17 @@ namespace Schachbot.Bot
                         if (chessBoard.Board[x][y].Piece.IsWhite)
                         {
                             whitePawnsInFile++;
+
+                            if ((chessBoard.Board[x + 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x + 1][y - 1].Piece.IsWhite) ||
+                                (chessBoard.Board[x - 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x - 1][y - 1].Piece.IsWhite))
+                            {
+                                structureVal += defendedBonus;
+                            }
+                            else if((chessBoard.Board[x + 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x + 1][y - 1].Piece.IsWhite) && 
+                                (chessBoard.Board[x - 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x - 1][y - 1].Piece.IsWhite)) 
+                            {
+                                structureVal += 2 * defendedBonus;
+                            }
                         }
                         else if (chessBoard.Board[x][y].Piece.IsBlack)
                         {
@@ -149,9 +165,19 @@ namespace Schachbot.Bot
                     }
                 }
 
-                if(whitePawnsInFile > 1)
+                if(whitePawnsInFile == 2)
                 {
-                    structureVal += 10 * whitePawnsInFile;
+                    structureVal -= doubledPawnsPenalty;
+                    whiteLastFileEmpty = false;
+                }
+                else if(whitePawnsInFile >= 3)
+                {
+                    structureVal -= tripledAndMorePenalty; 
+                    whiteLastFileEmpty = false;
+                }
+                else if (whitePawnsInFile == 1)
+                {
+                    whiteLastFileEmpty = false;
                 }
                 else if(whitePawnsInFile == 0)
                 {
@@ -159,17 +185,39 @@ namespace Schachbot.Bot
                     {
                         whitePawnIslands++;
                     }
-
+                    
+                    whiteLastFileEmpty = true;
                 }
 
-                if (blackPawnsInFile > 1)
+                if (blackPawnsInFile == 2)
                 {
-                    structureVal -= 10 * blackPawnsInFile;
+                    structureVal += doubledPawnsPenalty;
+                    blackLastFileEmpty = false;
+                }
+                else if (blackPawnsInFile >= 3)
+                {
+                    structureVal += tripledAndMorePenalty;
+                    blackLastFileEmpty = false;
+                }
+                else if (blackPawnsInFile == 1)
+                {
+                    blackLastFileEmpty = false;
+                }
+                else if (blackPawnsInFile == 0)
+                {
+                    if (!blackLastFileEmpty)
+                    {
+                        blackPawnIslands++;
+                    }
+
+                    blackLastFileEmpty = true;
                 }
 
                 whitePawnsInFile = 0;
                 blackPawnsInFile = 0;
             }
+
+            structureVal += (whitePawnIslands * pawnIslandPenalty) + (blackPawnIslands * -pawnIslandPenalty);
 
             return structureVal;
         }

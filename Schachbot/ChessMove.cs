@@ -13,7 +13,7 @@ namespace Schachbot
         public int ToX { get; private set; }
         public int ToY { get; private set; }
 
-        public double Score { get; private set; }
+        public double Score { get; set; }
 
         public ChessMove(int fromX, int fromY, int toX, int toY, double score)
         {
