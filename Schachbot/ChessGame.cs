@@ -57,7 +57,7 @@ public class ChessGame : Game
         // Erstelle ein neues Schachbrett
         Board = new ChessBoard();
         Board.InitializeField("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 2");
-        Board.InitializeField("rnbq1rk1/ppppppbp/5np1/8/3P4/4P3/PPPNBPPP/R1BQK1NR w KQkq - 0 2");
+        //Board.InitializeField("rnbq1rk1/ppppppbp/5np1/8/3P4/4P3/PPPNBPPP/R1BQK1NR w KQkq - 0 2");
 
         // Mate in 2 Puzzles for the bot
         //Board.InitializeField("r2k2nr/pp1b1Q1p/2n4b/3N4/3q4/3P4/PPP3PP/4RR1K w - - 1 0");

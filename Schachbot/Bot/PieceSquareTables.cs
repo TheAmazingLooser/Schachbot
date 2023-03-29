@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Schachbot.Pieces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,14 +12,14 @@ namespace Schachbot.Bot
         static int doubledPawnsPenalty = 50;
         static int tripledAndMorePenalty = 150;
         static int pawnIslandPenalty = 25;
-        static int defendedBonus = 25;
+        static int defendedBonus = 5;
 
         public static readonly int[] pst_pawn_white = {
           0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0,
-          0, 0, 0, 15, 15, 0, 0, 0,
-          0, 0, 0, 10, 10, 0, 0, 0,
+          0, 0, 0, 20, 20, 0, 0, 0,
+          0, 0, 0, 20, 20, 0, 0, 0,
           0, 0, 0, 5, 5, 0, 0, 0,
           0, 0, 0, -25, -25, 0, 0, 0,
           0, 0, 0, 0, 0, 0, 0, 0
@@ -136,24 +137,24 @@ namespace Schachbot.Bot
             bool blackLastFileEmpty = false;
             bool whiteLastFileEmpty = false;
 
-
             for (int x = 0; x < 8; x++)
             {
                 for(int y = 0; y < 8; y++)
                 {
-                    if(chessBoard.Board[x][y].Piece.GetType() == typeof(Pieces.Pawn))
+
+
+                    if(chessBoard.Board[x][y].Piece is Pawn pawn)
                     {
                         if (chessBoard.Board[x][y].Piece.IsWhite)
                         {
                             whitePawnsInFile++;
 
-                            if ((chessBoard.Board[x + 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x + 1][y - 1].Piece.IsWhite) ||
-                                (chessBoard.Board[x - 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x - 1][y - 1].Piece.IsWhite))
+                            if ((chessBoard.GetField(x + 1, y - 1) is ChessField f1 && f1.Piece is Pawn pawn1 && pawn1.IsWhite) ||
+                                (chessBoard.GetField(x - 1, y - 1) is ChessField f2 && f2.Piece is Pawn pawn2 && pawn2.IsWhite))
                             {
                                 structureVal += defendedBonus;
-                            }
-                            else if((chessBoard.Board[x + 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x + 1][y - 1].Piece.IsWhite) && 
-                                (chessBoard.Board[x - 1][y - 1].Piece.GetType() == typeof(Pieces.Pawn) && chessBoard.Board[x - 1][y - 1].Piece.IsWhite)) 
+                            } else if ((chessBoard.GetField(x + 1, y - 1) is ChessField f1_1 && f1_1.Piece is Pawn pawn1_1 && pawn1_1.IsWhite) &&
+                                      (chessBoard.GetField(x - 1, y - 1) is ChessField f2_2 && f2_2.Piece is Pawn pawn2_1 && pawn2_1.IsWhite))
                             {
                                 structureVal += 2 * defendedBonus;
                             }
@@ -161,6 +162,17 @@ namespace Schachbot.Bot
                         else if (chessBoard.Board[x][y].Piece.IsBlack)
                         {
                             blackPawnsInFile++;
+
+                            if ((chessBoard.GetField(x + 1, y - 1) is ChessField f1 && f1.Piece is Pawn pawn1 && !pawn1.IsWhite) ||
+                                (chessBoard.GetField(x - 1, y - 1) is ChessField f2 && f2.Piece is Pawn pawn2 && !pawn2.IsWhite))
+                            {
+                                structureVal -= defendedBonus;
+                            }
+                            else if ((chessBoard.GetField(x + 1, y - 1) is ChessField f1_1 && f1_1.Piece is Pawn pawn1_1 && !pawn1_1.IsWhite) &&
+                                     (chessBoard.GetField(x - 1, y - 1) is ChessField f2_2 && f2_2.Piece is Pawn pawn2_1 && !pawn2_1.IsWhite))
+                            {
+                                structureVal -= 2 * defendedBonus;
+                            }
                         }
                     }
                 }

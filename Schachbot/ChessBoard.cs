@@ -23,7 +23,7 @@ public class ChessBoard
     private int _arrowCount = 0;
 
     private double _elapsedMsBotMove = 0;
-    private int _botMaxMoveDelay = 3500;
+    private int _botMaxMoveDelay = 5000;
 
     private Evaluation evaluation = new Evaluation();
 
@@ -636,9 +636,10 @@ public class ChessBoard
         return copy;
     }
 
-    public double GetMaterialCount(bool IncludeSquareTable = true)
+    public double GetMaterialCount(bool IncludeSquareTable = true, bool IncludePawnStructure = true)
     {
-        double materialCount = 0;
+        double materialCount = IncludePawnStructure ? PieceSquareTables.EvaluatePawnStructure(this) : 0;
+
         double div = 1.0;
 
         foreach (ChessField[] rank in Board)
@@ -686,6 +687,7 @@ public class ChessBoard
                 }
             }
         }
+
         return materialCount;
     }
 }
