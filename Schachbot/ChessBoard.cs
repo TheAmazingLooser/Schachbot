@@ -23,7 +23,7 @@ public class ChessBoard
     private int _arrowCount = 0;
 
     private double _elapsedMsBotMove = 0;
-    private int _botMaxMoveDelay = 5000;
+    private int _botMaxMoveDelay = 10000;
 
     private Evaluation evaluation = new Evaluation();
 

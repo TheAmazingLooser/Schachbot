@@ -9,10 +9,14 @@ namespace Schachbot.Bot
 {
     public static class PieceSquareTables
     {
+        // Penalty
         static int doubledPawnsPenalty = 50;
         static int tripledAndMorePenalty = 150;
         static int pawnIslandPenalty = 25;
+        
+        // Bonis
         static int defendedBonus = 5;
+        static int passedPawnBonus = 10;
 
         public static readonly int[] pst_pawn_white = {
           0, 0, 0, 0, 0, 0, 0, 0,
@@ -137,6 +141,10 @@ namespace Schachbot.Bot
             bool blackLastFileEmpty = false;
             bool whiteLastFileEmpty = false;
 
+            bool isPassed = false;
+            int whitePassedPawnCount = 0;
+            int blackPassedPawnCount = 0;
+
             for (int x = 0; x < 8; x++)
             {
                 for(int y = 0; y < 8; y++)
@@ -158,6 +166,25 @@ namespace Schachbot.Bot
                             {
                                 structureVal += 2 * defendedBonus;
                             }
+
+                            for(int y2 = y; y2 < 8; y2++)
+                            {
+                                if((chessBoard.GetField(x + 1, y2) is ChessField field && field.Piece is Pawn pawn_passed && !pawn_passed.IsWhite) ||
+                                    (chessBoard.GetField(x + 1, y2) is ChessField field_2 && field_2.Piece is Pawn pawn_passed_2 && !pawn_passed_2.IsWhite))
+                                {
+                                    isPassed = false;
+                                    break;
+                                }
+                                else
+                                {
+                                    isPassed = true;
+                                }
+                            }
+
+                            if(isPassed)
+                            {
+                                whitePassedPawnCount++;
+                            }
                         }
                         else if (chessBoard.Board[x][y].Piece.IsBlack)
                         {
@@ -172,6 +199,25 @@ namespace Schachbot.Bot
                                      (chessBoard.GetField(x - 1, y - 1) is ChessField f2_2 && f2_2.Piece is Pawn pawn2_1 && !pawn2_1.IsWhite))
                             {
                                 structureVal -= 2 * defendedBonus;
+                            }
+
+                            for (int y2 = y; y2 > 0; y2--)
+                            {
+                                if ((chessBoard.GetField(x + 1, y2) is ChessField field && field.Piece is Pawn pawn_passed && pawn_passed.IsWhite) ||
+                                    (chessBoard.GetField(x + 1, y2) is ChessField field_2 && field_2.Piece is Pawn pawn_passed_2 && pawn_passed_2.IsWhite))
+                                {
+                                    isPassed = false;
+                                    break;
+                                }
+                                else
+                                {
+                                    isPassed = true;
+                                }
+                            }
+
+                            if (isPassed)
+                            {
+                                blackPassedPawnCount++;
                             }
                         }
                     }
@@ -230,6 +276,7 @@ namespace Schachbot.Bot
             }
 
             structureVal += (whitePawnIslands * pawnIslandPenalty) + (blackPawnIslands * -pawnIslandPenalty);
+            structureVal += (whitePassedPawnCount * passedPawnBonus) + (blackPassedPawnCount * -passedPawnBonus);
 
             return structureVal;
         }
