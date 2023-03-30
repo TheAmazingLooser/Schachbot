@@ -23,7 +23,7 @@ public class ChessBoard
     private int _arrowCount = 0;
 
     private double _elapsedMsBotMove = 0;
-    private int _botMaxMoveDelay = 10000;
+    private int _botMaxMoveDelay = 2000;
 
     private Evaluation evaluation = new Evaluation();
 
@@ -563,6 +563,74 @@ public class ChessBoard
         {
             _arrowCount = _arrowList.Count;
         }
+    }
+
+    public Dictionary<Vector2, List<Vector2>> GetCastleBlockingMoves(bool isWhiteToCastle, bool isShort)
+    {
+        Dictionary<Vector2, List<Vector2>> toReturn = new Dictionary<Vector2, List<Vector2>>();
+
+        List<Vector2> currentMoves;
+
+        List<int> checkLongCastle = new List<int>()
+            {
+                2, 3
+            };
+
+        List<int> checkShortCastle = new List<int>()
+            {
+                5, 6
+            };
+
+        try
+        {
+            for (int xS = 0; xS < 8; xS++)
+            {
+                for (int yS = 0; yS < 8; yS++)
+                {
+                     if (Board[xS][yS].Piece is BasePiece figurS && !isWhiteToCastle == figurS.IsWhite && figurS.GetType() != typeof(Pieces.King))
+                     {
+                        currentMoves = figurS.GetLegalMoves(this);
+
+                        for(int i = 0; i < currentMoves.Count;i++)
+                        {
+                            if(isShort)
+                            {
+                                if (isWhiteToCastle && (currentMoves[i].Y != 7 || !checkShortCastle.Contains((int)currentMoves[i].X)))
+                                {
+                                    currentMoves.RemoveAt(i);
+                                }
+                                if (!isWhiteToCastle && (currentMoves[i].Y != 0 || !checkShortCastle.Contains((int)currentMoves[i].X)))
+                                {
+                                    currentMoves.RemoveAt(i);
+                                }
+                            }
+                            else
+                            {
+                                if (isWhiteToCastle && (currentMoves[i].Y != 7 || !checkLongCastle.Contains((int)currentMoves[i].X)))
+                                {
+                                    currentMoves.RemoveAt(i);
+                                }
+                                if (!isWhiteToCastle && (currentMoves[i].Y != 0 || !checkLongCastle.Contains((int)currentMoves[i].X)))
+                                {
+                                    currentMoves.RemoveAt(i);
+                                }
+                            }
+                            
+                        }
+                        if(currentMoves.Count > 0)
+                        {
+                            toReturn.Add(new Vector2(xS, yS), currentMoves);
+                        }
+                    }
+                }
+            }
+
+        }
+        finally
+        {
+            // Ignore
+        }
+        return toReturn;
     }
 
     public override string ToString()

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Linq;
 
 namespace Schachbot.Pieces;
 
@@ -13,6 +14,7 @@ public class King : BasePiece, IChessPiece
     {
         MaterialValue = 9999;
         IsBlack = isBlack;
+        hasMoved= false;
     }
 
     public King(King p)
@@ -59,6 +61,70 @@ public class King : BasePiece, IChessPiece
                 toReturn.Add(new Vector2(x + xO, y + yO));
         }
 
+        void AddShortCastleIfPossible()
+        {
+            IChessPiece piece = chessBoard.GetField(7, y).Piece;
+            Rook rook;
+
+            if (!(chessBoard.GetField(7, y).Piece is Rook rook1 && !rook1.hasMoved && rook1.IsWhite == IsWhite) ||
+                /*this.hasMoved ||*/ chessBoard.IsChecked(this.IsWhite))
+            {
+                return;
+            }
+            else
+            {
+                if(chessBoard.GetCastleBlockingMoves(this.IsWhite, true).Count != 0)
+                {
+                    return;
+                }
+
+                if(chessBoard.GetField(x + 1, y).Piece != null || chessBoard.GetField(x + 2, y).Piece != null)
+                {
+                    return;
+                }
+            }
+
+            toReturn.Add(new Vector2(x + 2, y));
+        }
+
+        void AddLongCastleIfPossible()
+        {
+            IChessPiece piece = chessBoard.GetField(0,y).Piece;
+            Rook rook;
+
+            try
+            {
+                if (piece != null)
+                    rook = (Rook)piece;
+                else
+                    return;
+            }
+            catch
+            {
+                return;
+            }
+
+            if (!(!rook.hasMoved && rook.IsWhite == IsWhite) ||
+                /*this.hasMoved ||*/ chessBoard.IsChecked(this.IsWhite))
+            {
+                return;
+            }
+            else
+            {
+                if (chessBoard.GetCastleBlockingMoves(this.IsWhite, false).Count != 0)
+                {
+                    return;
+                }
+
+                if (chessBoard.GetField(x - 1, y).Piece != null || chessBoard.GetField(x - 2, y).Piece != null || chessBoard.GetField(x - 3, y).Piece != null)
+                {
+                    return;
+                }
+            }
+
+            toReturn.Add(new Vector2(x - 2, y));
+        }
+
         AddIfPossible(-1, 1);
         AddIfPossible(-1, 0);
         AddIfPossible(-1, -1);
@@ -67,6 +133,9 @@ public class King : BasePiece, IChessPiece
         AddIfPossible(1, -1);
         AddIfPossible(0, -1);
         AddIfPossible(0, 1);
+
+        //AddLongCastleIfPossible();
+        //AddShortCastleIfPossible();
 
         return toReturn;
     }

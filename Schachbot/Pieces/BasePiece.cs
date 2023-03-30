@@ -33,6 +33,8 @@ namespace Schachbot.Pieces
         /// </summary>
         public event MovedHandler Moved;
         
+        public bool hasMoved = false;
+
         /// <summary>
         /// The default ctor of every Chess Piece.
         /// </summary>
@@ -82,6 +84,7 @@ namespace Schachbot.Pieces
             this.x = x;
             this.y = y;
             Moved?.Invoke(oldX, oldY, x, y);
+            hasMoved = true;
         }
         
         public virtual Texture2D GetTexture(SpriteBatch sb)
