@@ -19,6 +19,9 @@ public class ChessBoard
     private Vector2 _whiteKingPosition = new Vector2();
     private Vector2 _blackKingPosition = new Vector2();
 
+    private King whiteKing = null;
+    private King blackKing = null;
+
     private List<KeyValuePair<Vector2, Vector2>> _arrowList = new List<KeyValuePair<Vector2, Vector2>>();
     private int _arrowCount = 0;
 
@@ -52,46 +55,6 @@ public class ChessBoard
         if (y < 0 || y >= 8) return null;
 
         return Board[x][y];
-    }
-
-    public void InitializeField()
-    {
-
-        Board = new ChessField[8][];
-        for (int x = 0; x < 8; x++)
-        {
-            Board[x] = new ChessField[8];
-            for (int y = 0; y < 8; y++)
-            {
-                Board[x][y] = new ChessField((x + y) % 2 == 1, x, y);
-            }
-        }
-
-        for (int x = 0; x < 8; x++)
-        {
-            Board[x][1].PlacePiece(new Pawn());
-            Board[x][6].PlacePiece(new Pawn(true));
-        }
-
-        foreach(var y in new[] {0,7})
-        {
-            Board[0][y].PlacePiece(new Rook(y == 7));
-            Board[1][y].PlacePiece(new Knight(y == 7));
-            Board[2][y].PlacePiece(new Bishop(y == 7));
-            Board[4][y].PlacePiece(new Queen(y == 7));
-            Board[5][y].PlacePiece(new Bishop(y == 7));
-            Board[6][y].PlacePiece(new Knight(y == 7));
-            Board[7][y].PlacePiece(new Rook(y == 7));
-        }
-
-        King weiss = new King();
-        King schwarz = new King(true);
-
-        weiss.Moved += (fX, fY, tX, tY) => KingMoved(true, new Vector2(tX, tY));
-        schwarz.Moved += (fX, fY, tX, tY) => KingMoved(false, new Vector2(tX, tY));
-
-        Board[3][0].PlacePiece(weiss);
-        Board[3][7].PlacePiece(schwarz);
     }
 
     public void InitializeField(string FEN)
@@ -175,32 +138,38 @@ public class ChessBoard
                 switch (chr.ToString().ToLower().First())
                 {
                     case 'r':
-                        Board[Col][Line].PlacePiece(new Rook(isBlack));
+                        Board[Col][Line].PlacePiece(new Rook(isBlack), true);
                         Col++;
                         break;
                     case 'n':
-                        Board[Col][Line].PlacePiece(new Knight(isBlack));
+                        Board[Col][Line].PlacePiece(new Knight(isBlack), true);
                         Col++;
                         break;
                     case 'b':
-                        Board[Col][Line].PlacePiece(new Bishop(isBlack));
+                        Board[Col][Line].PlacePiece(new Bishop(isBlack), true);
                         Col++;
                         break;
                     case 'q':
-                        Board[Col][Line].PlacePiece(new Queen(isBlack));
+                        Board[Col][Line].PlacePiece(new Queen(isBlack), true);
                         Col++;
                         break;
                     case 'k':
                         King k = new King(isBlack);
                         if (isBlack)
+                        {
+                            blackKing = k;
                             k.Moved += (fX, fY, tX, tY) => KingMoved(false, new Vector2(tX, tY));
+                        }
                         else
+                        {
+                            whiteKing = k;
                             k.Moved += (fX, fY, tX, tY) => KingMoved(true, new Vector2(tX, tY));
-                        Board[Col][Line].PlacePiece(k);
+                        }
+                        Board[Col][Line].PlacePiece(k, true);
                         Col++;
                         break;
                     case 'p':
-                        Board[Col][Line].PlacePiece(new Pawn(isBlack));
+                        Board[Col][Line].PlacePiece(new Pawn(isBlack), true);
                         Col++;
                         break;
                     default:
@@ -239,16 +208,18 @@ public class ChessBoard
         }
     }
 
-    public bool IsChecked(bool white)
+    public bool IsChecked(bool white, ChessBoard customBoard = null)
     {
-        Vector2 königPosition = GetKingPosition(white);
+        if (customBoard == null)
+            customBoard = this;
+        Vector2 königPosition = customBoard.GetKingPosition(white);
         for (int x = 0; x < 8; x++)
         {
             for (int y = 0; y < 8; y++)
             {
-                if (Board[x][y].Piece is IChessPiece figur && figur.IsWhite != white)
+                if (customBoard.GetField(x,y).Piece is IChessPiece figur && figur.IsWhite != white)
                 {
-                    List<Vector2> moves = figur.GetLegalMoves(this, true);
+                    List<Vector2> moves = figur.GetLegalMoves(customBoard, true);
                     if (moves.Contains(königPosition))
                         return true;
                 }
@@ -375,8 +346,24 @@ public class ChessBoard
     }
     public void DoMove(ChessMove move)
     {
-        Board[move.ToX][move.ToY].PlacePiece(Board[move.FromX][move.FromY].Piece);
-        Board[move.FromX][move.FromY].PlacePiece(null);
+        // Castling
+        if (GetField(move.FromX, move.FromY).Piece is King k && GetField(move.ToX, move.ToY).Piece is Rook r)
+        {
+            int x = move.ToX;
+            int y = move.ToY;
+            Board[move.FromX + (x == 0 ? -2 : 2)][y].PlacePiece(Board[move.FromX][move.FromY].Piece);
+            Board[move.FromX][move.FromY].PlacePiece(null);
+
+            Board[x + (x == 0 ? 3 : -2)][y].PlacePiece(Board[x][y].Piece);
+            Board[x][y].PlacePiece(null);
+
+        }
+        else
+        {
+            Board[move.ToX][move.ToY].PlacePiece(Board[move.FromX][move.FromY].Piece);
+            Board[move.FromX][move.FromY].PlacePiece(null);
+        }
+
 
         ConvertPawnsToQueens();
     }
@@ -419,8 +406,20 @@ public class ChessBoard
                 Board[x][(int)_hintPosition.Y].PlacePiece(null);
             }
 
-            Board[x][y].PlacePiece(Board[(int)_hintPosition.X][(int)_hintPosition.Y].Piece);
-            Board[(int)_hintPosition.X][(int)_hintPosition.Y].PlacePiece(null);
+            // Castling
+            if (GetField((int)_hintPosition.X, (int)_hintPosition.Y).Piece is King k && GetField(x,y).Piece is Rook r)
+            {
+                Board[(int)_hintPosition.X + (x == 0 ? -2 : 2)][y].PlacePiece(Board[(int)_hintPosition.X][(int)_hintPosition.Y].Piece);
+                Board[(int)_hintPosition.X][(int)_hintPosition.Y].PlacePiece(null);
+
+                Board[x + (x == 0 ? 3 : -2)][y].PlacePiece(Board[x][y].Piece);
+                Board[x][y].PlacePiece(null);
+                
+            } else
+            {
+                Board[x][y].PlacePiece(Board[(int)_hintPosition.X][(int)_hintPosition.Y].Piece);
+                Board[(int)_hintPosition.X][(int)_hintPosition.Y].PlacePiece(null);
+            }
 
             _whiteToMove = true;
             _hintPositions.Clear();
@@ -486,51 +485,46 @@ public class ChessBoard
         Dictionary<Vector2, List<Vector2>> AntiCheckMoves = new Dictionary<Vector2, List<Vector2>>();
         try
         {
-            Vector2 altePos = GetKingPosition(isWhite);
+
             for (int xS = 0; xS < 8; xS++)
             {
                 for (int yS = 0; yS < 8; yS++)
                 {
-                    if (Board[xS][yS].Piece is IChessPiece figurS && isWhite == figurS.IsWhite)
+                    ChessBoard copyBoard = Copy();
+                    if (copyBoard.GetField(xS, yS).Piece is IChessPiece figurS && isWhite == figurS.IsWhite)
                     {
-                        if (figurS is Pawn p)
-                        {
-                            p.SuppressMoveEvent = true;
-                        }
-                        List<Vector2> moves = figurS.GetLegalMoves(this);
+                        List<Vector2> moves = figurS.GetLegalMoves(copyBoard);
                         // Simulieren von einem Move
                         foreach (var move in moves)
                         {
-                            var oldFigur = Board[(int)move.X][(int)move.Y].Piece;
-                            Board[(int)move.X][(int)move.Y].PlacePiece(Board[xS][yS].Piece);
-                            Board[xS][yS].PlacePiece(null);
+                            int x = (int)move.X;
+                            int y = (int)move.Y;
 
-                            if (!IsChecked(isWhite))
+
+                            var oldFigur = copyBoard.GetField(x, y).Piece;
+                            copyBoard.GetField(x, y).PlacePiece(figurS);
+                            copyBoard.GetField(xS, yS).PlacePiece(null);
+
+                            if (!IsChecked(isWhite, copyBoard))
                             {
                                 if (AntiCheckMoves.ContainsKey(new Vector2(xS, yS)))
                                     AntiCheckMoves[new Vector2(xS, yS)].Add(move);
                                 else
                                     AntiCheckMoves.Add(new Vector2(xS, yS), new List<Vector2>() { move });
                             }
-                            Board[xS][yS].PlacePiece(figurS);
-                            Board[(int)move.X][(int)move.Y].PlacePiece(oldFigur);
-                            if (isWhite)
-                                _whiteKingPosition = altePos;
-                            else
-                                _blackKingPosition = altePos;
-                        }
-                        if (figurS is Pawn p2)
-                        {
-                            p2.SuppressMoveEvent = false;
+
+                            copyBoard.GetField(x, y).PlacePiece(copyBoard.GetField(xS, yS).Piece);
+                            copyBoard.GetField(xS, yS).PlacePiece(null);
                         }
                     }
                 }
             }
-
-        } finally
-        {
-            // Ignore
         }
+        finally
+        {
+            // Ignore :D
+        }
+
         return AntiCheckMoves;
     }
     
@@ -565,72 +559,22 @@ public class ChessBoard
         }
     }
 
-    public Dictionary<Vector2, List<Vector2>> GetCastleBlockingMoves(bool isWhiteToCastle, bool isShort)
+    public List<Vector2> GetCastleBlockingMoves(bool isWhiteToCastle)
     {
-        Dictionary<Vector2, List<Vector2>> toReturn = new Dictionary<Vector2, List<Vector2>>();
-
-        List<Vector2> currentMoves;
-
-        List<int> checkLongCastle = new List<int>()
-            {
-                2, 3
-            };
-
-        List<int> checkShortCastle = new List<int>()
-            {
-                5, 6
-            };
-
-        try
+        List<Vector2> toReturn = new List<Vector2>();
+        
+        for (int xS = 0; xS < 8; xS++)
         {
-            for (int xS = 0; xS < 8; xS++)
+            for (int yS = 0; yS < 8; yS++)
             {
-                for (int yS = 0; yS < 8; yS++)
+                if (Board[xS][yS].Piece is BasePiece figurS && !isWhiteToCastle == figurS.IsWhite && figurS.GetType() != typeof(Pieces.King))
                 {
-                     if (Board[xS][yS].Piece is BasePiece figurS && !isWhiteToCastle == figurS.IsWhite && figurS.GetType() != typeof(Pieces.King))
-                     {
-                        currentMoves = figurS.GetLegalMoves(this);
-
-                        for(int i = 0; i < currentMoves.Count;i++)
-                        {
-                            if(isShort)
-                            {
-                                if (isWhiteToCastle && (currentMoves[i].Y != 7 || !checkShortCastle.Contains((int)currentMoves[i].X)))
-                                {
-                                    currentMoves.RemoveAt(i);
-                                }
-                                if (!isWhiteToCastle && (currentMoves[i].Y != 0 || !checkShortCastle.Contains((int)currentMoves[i].X)))
-                                {
-                                    currentMoves.RemoveAt(i);
-                                }
-                            }
-                            else
-                            {
-                                if (isWhiteToCastle && (currentMoves[i].Y != 7 || !checkLongCastle.Contains((int)currentMoves[i].X)))
-                                {
-                                    currentMoves.RemoveAt(i);
-                                }
-                                if (!isWhiteToCastle && (currentMoves[i].Y != 0 || !checkLongCastle.Contains((int)currentMoves[i].X)))
-                                {
-                                    currentMoves.RemoveAt(i);
-                                }
-                            }
-                            
-                        }
-                        if(currentMoves.Count > 0)
-                        {
-                            toReturn.Add(new Vector2(xS, yS), currentMoves);
-                        }
-                    }
+                    toReturn.AddRange(figurS.GetLegalMoves(this));
                 }
             }
-
         }
-        finally
-        {
-            // Ignore
-        }
-        return toReturn;
+        
+        return toReturn.Distinct().ToList();
     }
 
     public override string ToString()
@@ -692,12 +636,18 @@ public class ChessBoard
                 {
                     bp = new King(king);
                     if (bp.IsBlack)
+                    {
+                        copy.blackKing = (King)bp;
                         bp.Moved += (fX, fY, tX, tY) => KingMoved(false, new Vector2(tX, tY));
+                    }
                     else
+                    {
+                        copy.whiteKing = (King)bp;
                         bp.Moved += (fX, fY, tX, tY) => KingMoved(true, new Vector2(tX, tY));
+                    }
                 }
 
-                copy.Board[x][y].PlacePiece(bp);
+                copy.Board[x][y].PlacePiece(bp, true);
             }
         }
 

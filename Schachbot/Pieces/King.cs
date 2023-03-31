@@ -9,12 +9,25 @@ public class King : BasePiece, IChessPiece
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
 
+    public bool HasMoved { get; private set; } = false;
+    public bool SuppressMoveEvent { get; set; } = false;
+
+    public void ResetMoved()
+    {
+        HasMoved = false;
+    }
 
     public King(bool isBlack = false)
     {
         MaterialValue = 9999;
         IsBlack = isBlack;
-        hasMoved= false;
+    }
+
+    public override void MoveTo(int x, int y, bool initialMove = false)
+    {
+        if (!initialMove && !SuppressMoveEvent)
+            HasMoved = true;
+        base.MoveTo(x, y, initialMove);
     }
 
     public King(King p)
@@ -61,68 +74,49 @@ public class King : BasePiece, IChessPiece
                 toReturn.Add(new Vector2(x + xO, y + yO));
         }
 
-        void AddShortCastleIfPossible()
+        void AddCastleIfPossible()
         {
-            IChessPiece piece = chessBoard.GetField(7, y).Piece;
-            Rook rook;
+            // Keine Rochade wenn King sich bereits bewegt hat!
+            if (HasMoved) return;
 
-            if (!(chessBoard.GetField(7, y).Piece is Rook rook1 && !rook1.hasMoved && rook1.IsWhite == IsWhite) ||
-                /*this.hasMoved ||*/ chessBoard.IsChecked(this.IsWhite))
+            int y = 0;
+            if (IsWhite)
+                y = 7;
+
+            // Wenn der Turm sich noch an der Anfangsposition befindet und sich noch nicht bewegt hat, dann ist eine Rochade mit diesen potentiell möglich!
+            if (chessBoard.GetField(7, y).Piece is Rook r && !r.HasMoved)
             {
-                return;
-            }
-            else
-            {
-                if(chessBoard.GetCastleBlockingMoves(this.IsWhite, true).Count != 0)
+                var blockingmoves = chessBoard.GetCastleBlockingMoves(IsWhite);
+                bool CanCastle = true;
+                for (int i = x + 1; i < 7; i++)
                 {
-                    return;
+                    if (chessBoard.GetField(i, y).Piece != null || blockingmoves.Contains(new Vector2(i, y)))
+                    {
+                        CanCastle = false;
+                        break;
+                    }
                 }
 
-                if(chessBoard.GetField(x + 1, y).Piece != null || chessBoard.GetField(x + 2, y).Piece != null)
+                if (CanCastle)
                 {
-                    return;
-                }
-            }
-
-            toReturn.Add(new Vector2(x + 2, y));
-        }
-
-        void AddLongCastleIfPossible()
-        {
-            IChessPiece piece = chessBoard.GetField(0,y).Piece;
-            Rook rook;
-
-            try
-            {
-                if (piece != null)
-                    rook = (Rook)piece;
-                else
-                    return;
-            }
-            catch
-            {
-                return;
-            }
-
-            if (!(!rook.hasMoved && rook.IsWhite == IsWhite) ||
-                /*this.hasMoved ||*/ chessBoard.IsChecked(this.IsWhite))
-            {
-                return;
-            }
-            else
-            {
-                if (chessBoard.GetCastleBlockingMoves(this.IsWhite, false).Count != 0)
-                {
-                    return;
+                    toReturn.Add(new Vector2(7, y));
                 }
 
-                if (chessBoard.GetField(x - 1, y).Piece != null || chessBoard.GetField(x - 2, y).Piece != null || chessBoard.GetField(x - 3, y).Piece != null)
+                CanCastle = true;
+                for (int i = x - 1; i > 0; i--)
                 {
-                    return;
+                    if (chessBoard.GetField(i, y).Piece != null || (blockingmoves.Contains(new Vector2(i, y)) && i != 1))
+                    {
+                        CanCastle = false;
+                        break;
+                    }
+                }
+
+                if (CanCastle)
+                {
+                    toReturn.Add(new Vector2(0, y));
                 }
             }
-
-            toReturn.Add(new Vector2(x - 2, y));
         }
 
         AddIfPossible(-1, 1);
@@ -134,7 +128,7 @@ public class King : BasePiece, IChessPiece
         AddIfPossible(0, -1);
         AddIfPossible(0, 1);
 
-        //AddLongCastleIfPossible();
+        AddCastleIfPossible();
         //AddShortCastleIfPossible();
 
         return toReturn;

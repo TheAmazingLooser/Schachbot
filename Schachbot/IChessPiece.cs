@@ -18,7 +18,7 @@ public interface IChessPiece
     public List<Vector2> GetLegalMoves(Schachbot.ChessBoard chessBoard, bool isCapturingOnly = false);
 
     public event MovedHandler Moved;
-    public void MoveTo(int x, int y);
+    public void MoveTo(int x, int y, bool initialMove = false);
 
     public string FEN_Name();
 }

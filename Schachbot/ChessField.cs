@@ -31,12 +31,12 @@ namespace Schachbot
         }
 
         // Funktion zum setzen der Figur
-        public void PlacePiece(IChessPiece piece)
+        public void PlacePiece(IChessPiece piece, bool initialMove = false)
         {
             _redraw = true;
             Piece = piece;
             if (Piece != null)
-                Piece.MoveTo(x, y);
+                Piece.MoveTo(x, y, initialMove);
         }
 
         // Funktion zum Zeichnen des Feldes

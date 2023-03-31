@@ -8,6 +8,16 @@ public class Rook : BasePiece, IChessPiece
     private static Texture2D _texture { get; set; }
     private static Texture2D _outline { get; set; }
 
+    public bool HasMoved { get; private set; } = false;
+    public bool SuppressMoveEvent { get; set; } = false;
+
+    public override void MoveTo(int x, int y, bool initialMove = false)
+    {
+        if (!initialMove && !SuppressMoveEvent)
+            HasMoved = true;
+        base.MoveTo(x, y, initialMove);
+    }
+
     public Rook(bool isBlack = false)
     {
         MaterialValue = 500;

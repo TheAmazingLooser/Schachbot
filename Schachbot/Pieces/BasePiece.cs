@@ -32,8 +32,6 @@ namespace Schachbot.Pieces
         /// If you want to use that, make sure to invoke <see cref="MoveTo(int, int)"/> in your moving-logic
         /// </summary>
         public event MovedHandler Moved;
-        
-        public bool hasMoved = false;
 
         /// <summary>
         /// The default ctor of every Chess Piece.
@@ -77,16 +75,16 @@ namespace Schachbot.Pieces
             return toReturn;
         }
 
-        public virtual void MoveTo(int x, int y)
+        public virtual void MoveTo(int x, int y, bool initialMove = false)
         {
             int oldX = this.x;
             int oldY = this.y;
             this.x = x;
             this.y = y;
+
             Moved?.Invoke(oldX, oldY, x, y);
-            hasMoved = true;
         }
-        
+
         public virtual Texture2D GetTexture(SpriteBatch sb)
         {
             throw new NotImplementedException();
